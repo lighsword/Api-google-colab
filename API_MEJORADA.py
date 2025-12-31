@@ -2371,4 +2371,13 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV', 'development') == 'development'
-    app.run(debug=debug, host='0.0.0.0', port=port)
+    
+    print("\n" + "="*80)
+    print("🚀 API MEJORADA CON 20 CARACTERÍSTICAS DE IA")
+    print("="*80)
+    print(f"✅ Servidor corriendo en: http://0.0.0.0:{port}")
+    print(f"📍 Puerto: {port}")
+    print(f"🔧 Debug: {debug}")
+    print("="*80 + "\n")
+    
+    app.run(debug=debug, host='0.0.0.0', port=port, use_reloader=False)
