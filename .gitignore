@@ -1,0 +1,17 @@
+# Configuración de Git
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.local
+.DS_Store
+*.egg-info/
+dist/
+build/
+.vscode/
+.idea/
+*.log
+.pytest_cache/
+venv/
+env/

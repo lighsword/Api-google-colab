@@ -44,13 +44,18 @@ from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 from scipy.stats import pearsonr
 import warnings
+import os
+from dotenv import load_dotenv
 
 warnings.filterwarnings('ignore')
+
+# Cargar variables de entorno
+load_dotenv()
 
 # ============================================================
 # 🔐 CONFIGURACIÓN DE SEGURIDAD Y AUTENTICACIÓN
 # ============================================================
-SECRET_KEY = 'tu_clave_secreta_super_segura_2024'  # CAMBIAR EN PRODUCCIÓN
+SECRET_KEY = os.getenv('SECRET_KEY', 'tu_clave_secreta_super_segura_2024')
 TOKEN_EXPIRATION_HOURS = 24
 
 app = Flask(__name__)
@@ -2362,4 +2367,8 @@ if __name__ == '__main__':
     print("      }")
     print("\n⚠️  NOTA: Tokens válidos por 24 horas. Generar nuevo si expira.")
     print("="*80 + "\n")
-    app.run(debug=True, port=5000)
+
+if __name__ == '__main__':
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_ENV', 'development') == 'development'
+    app.run(debug=debug, host='0.0.0.0', port=port)
