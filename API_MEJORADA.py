@@ -1845,7 +1845,7 @@ def get_usuario_firebase(usuario_id):
         return jsonify({'error': f'Error obteniendo usuario: {str(e)}'}), 500
 
 
-@app.route('/api/v2/firebase/gastos/<usuario_id>', methods=['GET'])
+@app.route('/api/v2/firebase/users/<usuario_id>/gastos', methods=['GET'])
 def get_gastos_firebase(usuario_id):
     """Obtiene todos los gastos de un usuario desde Firebase"""
     if not FIREBASE_AVAILABLE:
@@ -1870,7 +1870,7 @@ def get_gastos_firebase(usuario_id):
         return jsonify({'error': f'Error obteniendo gastos: {str(e)}'}), 500
 
 
-@app.route('/api/v2/firebase/gastos-procesados/<usuario_id>', methods=['GET'])
+@app.route('/api/v2/firebase/users/<usuario_id>/gastos-procesados', methods=['GET'])
 @token_required
 def get_gastos_procesados_firebase(usuario_id):
     """Obtiene gastos de Firebase y aplica análisis de IA"""
@@ -1912,7 +1912,7 @@ def get_gastos_procesados_firebase(usuario_id):
         return jsonify({'error': f'Error procesando gastos: {str(e)}'}), 500
 
 
-@app.route('/api/v2/firebase/crear-gasto/<usuario_id>', methods=['POST'])
+@app.route('/api/v2/firebase/users/<usuario_id>/gastos', methods=['POST'])
 @token_required
 def crear_gasto_firebase(usuario_id):
     """Crea un nuevo gasto en Firebase para un usuario"""
