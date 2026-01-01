@@ -34,6 +34,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
+from werkzeug.exceptions import BadRequest
 from functools import wraps
 import jwt
 import uuid
@@ -2073,16 +2074,36 @@ def crear_gasto_firebase(usuario_id):
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
-        data = request.get_json()
+        # Intentar leer JSON de forma tolerante
+        try:
+            data = request.get_json(silent=True)
+        except BadRequest as e:
+            return jsonify({'error': 'JSON inválido', 'detalle': str(e)}), 400
+
+        # Fallback a form-data si no viene JSON
+        if data is None:
+            data = request.form.to_dict() or {}
+            if not data:
+                return jsonify({
+                    'error': 'Cuerpo vacío o no es JSON',
+                    'hint': 'Use Content-Type: application/json o envíe form-data',
+                    'example': {'cantidad': 10.5, 'categoria': 'comida', 'descripcion': 'opcional'}
+                }), 400
         
         # Validar datos requeridos
-        cantidad = data.get('cantidad') or data.get('monto')
-        if not cantidad or not data.get('categoria'):
+        cantidad_val = data.get('cantidad') or data.get('monto')
+        categoria = data.get('categoria')
+        if cantidad_val is None or not categoria:
             return jsonify({'error': 'Faltan campos requeridos: cantidad, categoria'}), 400
+        # Validar que cantidad sea numérica
+        try:
+            cantidad_num = float(cantidad_val)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Cantidad/monto inválido', 'valor': cantidad_val}), 400
         
         gasto = {
-            'cantidad': float(cantidad),
-            'categoria': data.get('categoria'),
+            'cantidad': float(cantidad_num),
+            'categoria': categoria,
             'descripcion': data.get('descripcion', ''),
             'fecha': data.get('fecha', datetime.now().isoformat()),
             'createdAt': datetime.now().isoformat()
