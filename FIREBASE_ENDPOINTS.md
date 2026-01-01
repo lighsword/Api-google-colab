@@ -33,7 +33,7 @@ GET /api/v2/firebase/usuarios/{usuario_id}
 
 **Ejemplo:**
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/yordan03224@hotmail.com
+GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 ```
 
 **Respuesta:**
@@ -41,8 +41,8 @@ GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/yordan03224@h
 {
   "status": "success",
   "data": {
-    "id": "yordan03224@hotmail.com",
-    "email": "yordan03224@hotmail.com",
+    "id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
+    "email": "usuario@gmail.com",
     "nombre": "Yordan"
   }
 }
@@ -57,22 +57,22 @@ GET /api/v2/firebase/gastos/{usuario_id}
 
 **Ejemplo:**
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/yordan03224@hotmail.com
+GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 ```
 
 **Respuesta:**
 ```json
 {
   "status": "success",
-  "usuario_id": "yordan03224@hotmail.com",
+  "usuario_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
   "total_gastos": 5,
   "data": [
     {
-      "id": "gasto123",
-      "monto": 50,
-      "categoria": "Comida",
-      "descripcion": "Almuerzo",
-      "fecha": "2024-12-30T14:30:00"
+      "id": "5ZivLl6foLLSbfs5IU79",
+      "cantidad": 18.67,
+      "categoria": "Transporte",
+      "descripcion": "taxi temprano",
+      "fecha": "2025-12-30"
     }
   ]
 }
@@ -89,7 +89,7 @@ Headers:
 
 **Ejemplo:**
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/yordan03224@hotmail.com
+GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 Headers:
   Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
 ```
@@ -98,17 +98,17 @@ Headers:
 ```json
 {
   "status": "success",
-  "usuario_id": "yordan03224@hotmail.com",
+  "usuario_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
   "total_gastos": 5,
   "gasto_total": 250.50,
   "promedio_gasto": 50.10,
   "resumen_por_categoria": {
-    "Comida": {
+    "Transporte": {
       "sum": 150,
       "count": 3,
       "mean": 50
     },
-    "Transporte": {
+    "Comida": {
       "sum": 100.50,
       "count": 2,
       "mean": 50.25
@@ -129,7 +129,7 @@ Headers:
 
 Body:
 {
-  "monto": 75.50,
+  "cantidad": 75.50,
   "categoria": "Comida",
   "descripcion": "Cena en restaurante",
   "fecha": "2024-12-30"
@@ -138,14 +138,14 @@ Body:
 
 **Ejemplo completo:**
 ```
-POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/yordan03224@hotmail.com
+POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 Headers:
   Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
   Content-Type: application/json
 
 Body:
 {
-  "monto": 45,
+  "cantidad": 45,
   "categoria": "Transporte",
   "descripcion": "Uber",
   "fecha": "2024-12-30"
@@ -159,11 +159,11 @@ Body:
   "mensaje": "Gasto creado correctamente",
   "gasto_id": "nuevo_gasto_id_123",
   "data": {
-    "monto": 45,
+    "cantidad": 45,
     "categoria": "Transporte",
     "descripcion": "Uber",
     "fecha": "2024-12-30",
-    "creado_en": "2024-12-30T15:45:00"
+    "createdAt": "2024-12-30T15:45:00"
   }
 }
 ```
@@ -175,30 +175,30 @@ Body:
 ### Paso 1: Obtener Token
 ```
 POST https://api-google-colab.onrender.com/api/v2/auth/token
-Body: {"user_id": "yordan03224@hotmail.com"}
+Body: {"user_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2"}
 ```
 
 ### Paso 2: Obtener Gastos sin IA (sin token)
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/yordan03224@hotmail.com
+GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 ```
 
 ### Paso 3: Obtener Gastos con Análisis IA (requiere token)
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/yordan03224@hotmail.com
+GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 Headers:
   Authorization: Bearer {token_del_paso_1}
 ```
 
 ### Paso 4: Crear un Nuevo Gasto
 ```
-POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/yordan03224@hotmail.com
+POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/BCc7NaZ4KQTqFY3dUxgStWH62dh2
 Headers:
   Authorization: Bearer {token_del_paso_1}
   Content-Type: application/json
 Body:
 {
-  "monto": 50,
+  "cantidad": 50,
   "categoria": "Comida",
   "descripcion": "Desayuno",
   "fecha": "2024-12-31"
@@ -232,26 +232,43 @@ Body:
 
 ---
 
-## ✅ Estructura Firebase Esperada
+## ✅ Estructura Firebase Actual
 
-Tu Firebase debe tener esta estructura:
+Tu Firebase tiene esta estructura:
 
 ```
-usuarios/
-  └── {usuario_id}/
-      ├── email: "yordan03224@hotmail.com"
-      ├── nombre: "Yordan"
-      └── gastos/
-          ├── {gasto_id}/
-          │   ├── monto: 50
-          │   ├── categoria: "Comida"
-          │   ├── descripcion: "Almuerzo"
-          │   └── fecha: "2024-12-30"
-          └── {gasto_id_2}/
-              ├── monto: 30
-              ├── categoria: "Transporte"
-              └── fecha: "2024-12-31"
+gestofin/
+  └── users/
+      ├── BCc7NaZ4KQTqFY3dUxgStWH62dh2/  (userId autogenerado)
+      │   ├── budget/
+      │   │   ├── ahorroRecomendado: 90
+      │   │   ├── gastosTotales: 302.92
+      │   │   ├── metaAhorro: 400
+      │   │   ├── presupuesoGeneral: 600
+      │   │   └── updatedAt: timestamp
+      │   └── gastos/ (Subcolección)
+      │       ├── 5ZivLl6foLLSbfs5IU79/
+      │       │   ├── cantidad: 18.67
+      │       │   ├── categoria: "Transporte"
+      │       │   ├── descripcion: "taxi temprano"
+      │       │   └── fecha: "2025-12-30"
+      │       └── {otro_gastoId}/
+      │           ├── cantidad: 50
+      │           ├── categoria: "Comida"
+      │           └── fecha: "2025-12-31"
+      ├── qn6FfGYZboNB48n26hjyYPEt8L43/
+      │   └── gastos/ (Subcolección)
+      └── sdyUylJAItaxjjVJEThKbhxeJFz2/
+          └── gastos/ (Subcolección)
 ```
+
+**Campos importantes:**
+- Colección raíz: **`gestofin`**
+- Colección de usuarios: **`gestofin/users`**
+- IDs de usuarios: Auto-generados (hashes como BCc7NaZ4KQTqFY3dUxgStWH62dh2)
+- Campo de monto: **`cantidad`** (no `monto`)
+- Subcollección de gastos: **`gestofin/users/{userId}/gastos`**
+- IDs de gastos: Auto-generados (hashes como 5ZivLl6foLLSbfs5IU79)
 
 ---
 

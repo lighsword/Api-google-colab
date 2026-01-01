@@ -1799,7 +1799,7 @@ def get_usuarios_firebase():
     
     try:
         usuarios = []
-        docs = db.collection('usuarios').stream()
+        docs = db.collection('gestofin').collection('users').stream()
         
         for doc in docs:
             usuario = doc.to_dict()
@@ -1822,13 +1822,25 @@ def get_usuario_firebase(usuario_id):
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
-        doc = db.collection('usuarios').document(usuario_id).get()
+        # Intentar obtener el documento del usuario
+        doc = db.collection('gestofin').collection('users').document(usuario_id).get()
         
-        if not doc.exists:
-            return jsonify({'error': 'Usuario no encontrado'}), 404
-        
-        usuario = doc.to_dict()
-        usuario['id'] = doc.id
+        if doc.exists:
+            usuario = doc.to_dict()
+            usuario['id'] = doc.id
+        else:
+            # Si no existe, crear una estructura básica con el ID del usuario
+            usuario = {
+                'id': usuario_id,
+                'createdAt': datetime.now().isoformat()
+            }
+            # Intentar obtener el budget desde la subcollection
+            try:
+                budget_doc = db.collection('gestofin').collection('users').document(usuario_id).collection('budget').document('current').get()
+                if budget_doc.exists:
+                    usuario['budget'] = budget_doc.to_dict()
+            except:
+                pass
         
         return jsonify({
             'status': 'success',
@@ -1846,7 +1858,7 @@ def get_gastos_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('usuarios').document(usuario_id).collection('gastos').stream()
+        docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1872,7 +1884,7 @@ def get_gastos_procesados_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('usuarios').document(usuario_id).collection('gastos').stream()
+        docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1889,15 +1901,15 @@ def get_gastos_procesados_firebase(usuario_id):
         # Procesar gastos con pandas
         df = pd.DataFrame(gastos)
         
-        # Resumen por categoría
-        resumen = df.groupby('categoria')['monto'].agg(['sum', 'count', 'mean']).round(2).to_dict()
+        # Resumen por categoría - Usar 'cantidad'
+        resumen = df.groupby('categoria')['cantidad'].agg(['sum', 'count', 'mean']).round(2).to_dict()
         
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
             'total_gastos': len(gastos),
-            'gasto_total': float(df['monto'].sum()),
-            'promedio_gasto': float(df['monto'].mean()),
+            'gasto_total': float(df['cantidad'].sum()),
+            'promedio_gasto': float(df['cantidad'].mean()),
             'resumen_por_categoria': resumen,
             'data': gastos
         }), 200
@@ -1916,19 +1928,20 @@ def crear_gasto_firebase(usuario_id):
         data = request.get_json()
         
         # Validar datos requeridos
-        if not data.get('monto') or not data.get('categoria'):
-            return jsonify({'error': 'Faltan campos requeridos: monto, categoria'}), 400
+        cantidad = data.get('cantidad') or data.get('monto')
+        if not cantidad or not data.get('categoria'):
+            return jsonify({'error': 'Faltan campos requeridos: cantidad, categoria'}), 400
         
         gasto = {
-            'monto': float(data.get('monto')),
+            'cantidad': float(cantidad),
             'categoria': data.get('categoria'),
             'descripcion': data.get('descripcion', ''),
             'fecha': data.get('fecha', datetime.now().isoformat()),
-            'creado_en': datetime.now().isoformat()
+            'createdAt': datetime.now().isoformat()
         }
         
         # Guardar en Firebase
-        doc_ref = db.collection('usuarios').document(usuario_id).collection('gastos').document()
+        doc_ref = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').document()
         doc_ref.set(gasto)
         
         return jsonify({
