@@ -1860,7 +1860,8 @@ def get_gastos_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('gestofin').document('users').collection(usuario_id).stream()
+        # Path: gestofin (colección) -> users (documento) -> {usuario_id} (subcolección) -> gastos (subcolección)
+        docs = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1886,7 +1887,7 @@ def get_gastos_procesados_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('gestofin').document('users').collection(usuario_id).stream()
+        docs = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1943,7 +1944,7 @@ def crear_gasto_firebase(usuario_id):
         }
         
         # Guardar en Firebase
-        doc_ref = db.collection('gestofin').document('users').collection(usuario_id).document()
+        doc_ref = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').document()
         doc_ref.set(gasto)
         
         return jsonify({
