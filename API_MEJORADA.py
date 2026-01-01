@@ -58,16 +58,35 @@ load_dotenv()
 # 🔥 CONFIGURACIÓN DE FIREBASE
 # ============================================================
 try:
-    # Intentar cargar desde JSON local
+    # Opción 1: Usar archivo JSON si existe localmente
     if os.path.exists('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json'):
         cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
         firebase_admin.initialize_app(cred)
         db = firestore.client()
         FIREBASE_AVAILABLE = True
-        print("✅ Firebase conectado correctamente")
+        print("✅ Firebase conectado correctamente (desde archivo JSON)")
+    # Opción 2: Usar variables de entorno en Render
+    elif all([os.getenv('FIREBASE_TYPE'), os.getenv('FIREBASE_PROJECT_ID'), os.getenv('FIREBASE_PRIVATE_KEY')]):
+        firebase_config = {
+            "type": os.getenv('FIREBASE_TYPE'),
+            "project_id": os.getenv('FIREBASE_PROJECT_ID'),
+            "private_key_id": os.getenv('FIREBASE_PRIVATE_KEY_ID'),
+            "private_key": os.getenv('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
+            "client_email": os.getenv('FIREBASE_CLIENT_EMAIL'),
+            "client_id": os.getenv('FIREBASE_CLIENT_ID'),
+            "auth_uri": os.getenv('FIREBASE_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth'),
+            "token_uri": os.getenv('FIREBASE_TOKEN_URI', 'https://oauth2.googleapis.com/token'),
+            "auth_provider_x509_cert_url": os.getenv('FIREBASE_AUTH_PROVIDER_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs'),
+            "client_x509_cert_url": os.getenv('FIREBASE_CLIENT_CERT_URL')
+        }
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        FIREBASE_AVAILABLE = True
+        print("✅ Firebase conectado correctamente (desde variables de entorno)")
     else:
         FIREBASE_AVAILABLE = False
-        print("⚠️  Archivo de credenciales Firebase no encontrado")
+        print("⚠️  Firebase no disponible - Configura variables de entorno en Render")
 except Exception as e:
     FIREBASE_AVAILABLE = False
     print(f"⚠️  Error conectando Firebase: {str(e)}")
