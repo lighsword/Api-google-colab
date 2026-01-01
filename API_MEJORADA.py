@@ -72,6 +72,12 @@ try:
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde archivo JSON)")
+        try:
+            import firebase_admin as _fb
+            app_opts = _fb.get_app().options if _fb.get_app() else {}
+            print(f"📡 Firestore ProjectId: {app_opts.get('projectId')}")
+        except Exception:
+            pass
     # Opción 2: Usar variables de entorno en Render
     elif all([os.getenv('FIREBASE_TYPE'), os.getenv('FIREBASE_PROJECT_ID'), os.getenv('FIREBASE_PRIVATE_KEY')]):
         firebase_config = {
@@ -93,6 +99,12 @@ try:
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde variables de entorno)")
+        try:
+            import firebase_admin as _fb
+            app_opts = _fb.get_app().options if _fb.get_app() else {}
+            print(f"📡 Firestore ProjectId: {app_opts.get('projectId')} | ENV: {os.getenv('FIREBASE_PROJECT_ID')}")
+        except Exception:
+            pass
     else:
         print("⚠️  Firebase no disponible - Configura variables de entorno en Render")
 except Exception as e:
@@ -1804,6 +1816,29 @@ def get_usuarios_firebase():
     if not FIREBASE_AVAILABLE:
         return jsonify({'error': 'Firebase no disponible'}), 503
     
+    @app.route('/api/v2/firebase/debug', methods=['GET'])
+    def firebase_debug():
+        """Diagnóstico de conexión Firestore: proyecto y colecciones"""
+        try:
+            info = {
+                'firebase_available': bool(FIREBASE_AVAILABLE),
+            }
+            if not FIREBASE_AVAILABLE:
+                return jsonify({'status': 'error', 'message': 'Firebase no disponible', 'data': info}), 503
+            # Proyecto
+            import firebase_admin as _fb
+            app_opts = _fb.get_app().options if _fb.get_app() else {}
+            info['projectId'] = app_opts.get('projectId')
+            info['env_projectId'] = os.getenv('FIREBASE_PROJECT_ID')
+            # Colecciones top-level
+            try:
+                top_cols = [c.id for c in db.collections()]
+            except Exception as e:
+                top_cols = [f'error_listando: {str(e)}']
+            info['collections'] = top_cols
+            return jsonify({'status': 'success', 'data': info}), 200
+        except Exception as e:
+            return jsonify({'error': f'Debug Firestore: {str(e)}'}), 500
     try:
         usuarios = []
         docs = db.collection('gestofin').collection('users').stream()
