@@ -57,13 +57,18 @@ load_dotenv()
 # ============================================================
 # 🔥 CONFIGURACIÓN DE FIREBASE
 # ============================================================
+FIREBASE_AVAILABLE = False
+db = None
+
 try:
     # Opción 1: Usar archivo JSON si existe localmente
     if os.path.exists('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json'):
         cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
+        # Inicializar con databaseURL para Realtime Database o sin él para Firestore
         firebase_admin.initialize_app(cred, {
-            'projectId': 'gestor-financiero-28ac2',
+            'databaseURL': 'https://gestor-financiero-28ac2.firebaseio.com'
         })
+        # Usar Firestore
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde archivo JSON)")
@@ -83,16 +88,14 @@ try:
         }
         cred = credentials.Certificate(firebase_config)
         firebase_admin.initialize_app(cred, {
-            'projectId': os.getenv('FIREBASE_PROJECT_ID'),
+            'databaseURL': f"https://{os.getenv('FIREBASE_PROJECT_ID')}.firebaseio.com"
         })
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde variables de entorno)")
     else:
-        FIREBASE_AVAILABLE = False
         print("⚠️  Firebase no disponible - Configura variables de entorno en Render")
 except Exception as e:
-    FIREBASE_AVAILABLE = False
     print(f"⚠️  Error conectando Firebase: {str(e)}")
 
 # ============================================================
