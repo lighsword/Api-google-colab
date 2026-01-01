@@ -46,11 +46,31 @@ from scipy.stats import pearsonr
 import warnings
 import os
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 warnings.filterwarnings('ignore')
 
 # Cargar variables de entorno
 load_dotenv()
+
+# ============================================================
+# 🔥 CONFIGURACIÓN DE FIREBASE
+# ============================================================
+try:
+    # Intentar cargar desde JSON local
+    if os.path.exists('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json'):
+        cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
+        firebase_admin.initialize_app(cred)
+        db = firestore.client()
+        FIREBASE_AVAILABLE = True
+        print("✅ Firebase conectado correctamente")
+    else:
+        FIREBASE_AVAILABLE = False
+        print("⚠️  Archivo de credenciales Firebase no encontrado")
+except Exception as e:
+    FIREBASE_AVAILABLE = False
+    print(f"⚠️  Error conectando Firebase: {str(e)}")
 
 # ============================================================
 # 🔐 CONFIGURACIÓN DE SEGURIDAD Y AUTENTICACIÓN
@@ -1739,12 +1759,167 @@ def health():
     return jsonify({
         'status': 'ok',
         'timestamp': datetime.now().isoformat(),
+        'firebase': FIREBASE_AVAILABLE,
         'modelos_disponibles': {
             'arima': ARIMA_AVAILABLE,
             'prophet': PROPHET_AVAILABLE,
             'lstm': LSTM_AVAILABLE
         }
     }), 200
+
+
+# ============================================================
+# 🔥 ENDPOINTS DE FIREBASE - CONSUMIR DATOS DEL APP FLUTTER
+# ============================================================
+
+@app.route('/api/v2/firebase/usuarios', methods=['GET'])
+def get_usuarios_firebase():
+    """Obtiene todos los usuarios registrados en Firebase"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        usuarios = []
+        docs = db.collection('usuarios').stream()
+        
+        for doc in docs:
+            usuario = doc.to_dict()
+            usuario['id'] = doc.id
+            usuarios.append(usuario)
+        
+        return jsonify({
+            'status': 'success',
+            'total': len(usuarios),
+            'data': usuarios
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error obteniendo usuarios: {str(e)}'}), 500
+
+
+@app.route('/api/v2/firebase/usuarios/<usuario_id>', methods=['GET'])
+def get_usuario_firebase(usuario_id):
+    """Obtiene un usuario específico por ID"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        doc = db.collection('usuarios').document(usuario_id).get()
+        
+        if not doc.exists:
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        
+        usuario = doc.to_dict()
+        usuario['id'] = doc.id
+        
+        return jsonify({
+            'status': 'success',
+            'data': usuario
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error obteniendo usuario: {str(e)}'}), 500
+
+
+@app.route('/api/v2/firebase/gastos/<usuario_id>', methods=['GET'])
+def get_gastos_firebase(usuario_id):
+    """Obtiene todos los gastos de un usuario desde Firebase"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos = []
+        docs = db.collection('usuarios').document(usuario_id).collection('gastos').stream()
+        
+        for doc in docs:
+            gasto = doc.to_dict()
+            gasto['id'] = doc.id
+            gastos.append(gasto)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'total_gastos': len(gastos),
+            'data': gastos
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error obteniendo gastos: {str(e)}'}), 500
+
+
+@app.route('/api/v2/firebase/gastos-procesados/<usuario_id>', methods=['GET'])
+@token_required
+def get_gastos_procesados_firebase(usuario_id):
+    """Obtiene gastos de Firebase y aplica análisis de IA"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos = []
+        docs = db.collection('usuarios').document(usuario_id).collection('gastos').stream()
+        
+        for doc in docs:
+            gasto = doc.to_dict()
+            gasto['id'] = doc.id
+            gastos.append(gasto)
+        
+        if not gastos:
+            return jsonify({
+                'status': 'success',
+                'mensaje': 'Sin gastos registrados',
+                'data': []
+            }), 200
+        
+        # Procesar gastos con pandas
+        df = pd.DataFrame(gastos)
+        
+        # Resumen por categoría
+        resumen = df.groupby('categoria')['monto'].agg(['sum', 'count', 'mean']).round(2).to_dict()
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'total_gastos': len(gastos),
+            'gasto_total': float(df['monto'].sum()),
+            'promedio_gasto': float(df['monto'].mean()),
+            'resumen_por_categoria': resumen,
+            'data': gastos
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error procesando gastos: {str(e)}'}), 500
+
+
+@app.route('/api/v2/firebase/crear-gasto/<usuario_id>', methods=['POST'])
+@token_required
+def crear_gasto_firebase(usuario_id):
+    """Crea un nuevo gasto en Firebase para un usuario"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data.get('monto') or not data.get('categoria'):
+            return jsonify({'error': 'Faltan campos requeridos: monto, categoria'}), 400
+        
+        gasto = {
+            'monto': float(data.get('monto')),
+            'categoria': data.get('categoria'),
+            'descripcion': data.get('descripcion', ''),
+            'fecha': data.get('fecha', datetime.now().isoformat()),
+            'creado_en': datetime.now().isoformat()
+        }
+        
+        # Guardar en Firebase
+        doc_ref = db.collection('usuarios').document(usuario_id).collection('gastos').document()
+        doc_ref.set(gasto)
+        
+        return jsonify({
+            'status': 'success',
+            'mensaje': 'Gasto creado correctamente',
+            'gasto_id': doc_ref.id,
+            'data': gasto
+        }), 201
+    except Exception as e:
+        return jsonify({'error': f'Error creando gasto: {str(e)}'}), 500
 
 
 @app.route('/api/v2/predict-category', methods=['POST'])
