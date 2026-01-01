@@ -66,7 +66,8 @@ try:
         cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
         # Inicializar con databaseURL para Realtime Database o sin él para Firestore
         firebase_admin.initialize_app(cred, {
-            'databaseURL': 'https://gestor-financiero-28ac2.firebaseio.com'
+            'databaseURL': 'https://gestor-financiero-28ac2.firebaseio.com',
+            'projectId': 'gestor-financiero-28ac2'
         })
         # Usar Firestore
         db = firestore.client()
@@ -94,7 +95,8 @@ try:
         }
         cred = credentials.Certificate(firebase_config)
         firebase_admin.initialize_app(cred, {
-            'databaseURL': f"https://{os.getenv('FIREBASE_PROJECT_ID')}.firebaseio.com"
+            'databaseURL': f"https://{os.getenv('FIREBASE_PROJECT_ID')}.firebaseio.com",
+            'projectId': os.getenv('FIREBASE_PROJECT_ID')
         })
         db = firestore.client()
         FIREBASE_AVAILABLE = True
@@ -1930,7 +1932,7 @@ def get_gastos_firebase(usuario_id):
             'usuario_id': usuario_id,
             'total_gastos': len(gastos),
             'path_usado': path_used,
-            'data': gastos
+            'data': gastos if request.args.get('ids_only') != 'true' else [g['id'] for g in gastos]
         }), 200
     except Exception as e:
         return jsonify({'error': f'Error obteniendo gastos: {str(e)}'}), 500
@@ -2016,6 +2018,48 @@ def get_gastos_procesados_firebase(usuario_id):
             'resumen_por_categoria': resumen,
             'data': gastos
         }), 200
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/gastos-ids', methods=['GET'])
+def get_gastos_ids(usuario_id):
+    """Devuelve solo la lista de IDs de los documentos de gastos"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    try:
+        ids = []
+        path_used = None
+        # Try gestofin/{uid}/gastos
+        try:
+            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
+            path_used = f'gestofin/{usuario_id}/gastos'
+            ids = [doc.id for doc in docs]
+        except Exception:
+            pass
+        # Try gestofin/users/{uid}/gastos
+        if not ids:
+            try:
+                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'gestofin/users/{usuario_id}/gastos'
+                ids = [doc.id for doc in docs]
+            except Exception:
+                pass
+        # Try users/{uid}/gastos
+        if not ids:
+            try:
+                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'users/{usuario_id}/gastos'
+                ids = [doc.id for doc in docs]
+            except Exception:
+                pass
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'total_gastos': len(ids),
+            'path_usado': path_used,
+            'ids': ids
+        }), 200
+    except Exception as e:
+        return jsonify({'error': f'Error listando IDs de gastos: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': f'Error procesando gastos: {str(e)}'}), 500
 
