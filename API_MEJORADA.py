@@ -1889,18 +1889,35 @@ def get_gastos_firebase(usuario_id):
     
     try:
         gastos = []
-        # Path correcta: gestofin (colección) → {usuario_id} (documento) → gastos (subcolección)
-        docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
+        path_used = None
+        # Intento 1: gestofin/{uid}/gastos
+        try:
+            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
+            path_used = f'gestofin/{usuario_id}/gastos'
+            for doc in docs:
+                gasto = doc.to_dict()
+                gasto['id'] = doc.id
+                gastos.append(gasto)
+        except Exception:
+            pass
         
-        for doc in docs:
-            gasto = doc.to_dict()
-            gasto['id'] = doc.id
-            gastos.append(gasto)
+        # Intento 2 (fallback): users/{uid}/gastos
+        if not gastos:
+            try:
+                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'users/{usuario_id}/gastos'
+                for doc in docs:
+                    gasto = doc.to_dict()
+                    gasto['id'] = doc.id
+                    gastos.append(gasto)
+            except Exception:
+                pass
         
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
             'total_gastos': len(gastos),
+            'path_usado': path_used,
             'data': gastos
         }), 200
     except Exception as e:
@@ -1916,17 +1933,35 @@ def get_gastos_procesados_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
+        path_used = None
+        # Intento 1: gestofin/{uid}/gastos
+        try:
+            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
+            path_used = f'gestofin/{usuario_id}/gastos'
+            for doc in docs:
+                gasto = doc.to_dict()
+                gasto['id'] = doc.id
+                gastos.append(gasto)
+        except Exception:
+            pass
         
-        for doc in docs:
-            gasto = doc.to_dict()
-            gasto['id'] = doc.id
-            gastos.append(gasto)
+        # Intento 2 (fallback): users/{uid}/gastos
+        if not gastos:
+            try:
+                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'users/{usuario_id}/gastos'
+                for doc in docs:
+                    gasto = doc.to_dict()
+                    gasto['id'] = doc.id
+                    gastos.append(gasto)
+            except Exception:
+                pass
         
         if not gastos:
             return jsonify({
                 'status': 'success',
                 'mensaje': 'Sin gastos registrados',
+                'path_usado': path_used,
                 'data': []
             }), 200
         
@@ -1940,8 +1975,9 @@ def get_gastos_procesados_firebase(usuario_id):
             'status': 'success',
             'usuario_id': usuario_id,
             'total_gastos': len(gastos),
-            'gasto_total': float(df['cantidad'].sum()),
-            'promedio_gasto': float(df['cantidad'].mean()),
+            'path_usado': path_used,
+            'gasto_total': float(df['cantidad'].sum()) if 'cantidad' in df.columns else float(df['monto'].sum()),
+            'promedio_gasto': float(df['cantidad'].mean()) if 'cantidad' in df.columns else float(df['monto'].mean()),
             'resumen_por_categoria': resumen,
             'data': gastos
         }), 200
@@ -1972,14 +2008,21 @@ def crear_gasto_firebase(usuario_id):
             'createdAt': datetime.now().isoformat()
         }
         
-        # Guardar en Firebase: gestofin/{usuario_id}/gastos/{nuevo}
-        doc_ref = db.collection('gestofin').document(usuario_id).collection('gastos').document()
-        doc_ref.set(gasto)
+        # Guardar en Firebase: intentar en gestofin/{uid}/gastos, si falla, en users/{uid}/gastos
+        try:
+            doc_ref = db.collection('gestofin').document(usuario_id).collection('gastos').document()
+            doc_ref.set(gasto)
+            path_used = f'gestofin/{usuario_id}/gastos/{doc_ref.id}'
+        except Exception:
+            doc_ref = db.collection('users').document(usuario_id).collection('gastos').document()
+            doc_ref.set(gasto)
+            path_used = f'users/{usuario_id}/gastos/{doc_ref.id}'
         
         return jsonify({
             'status': 'success',
             'mensaje': 'Gasto creado correctamente',
             'gasto_id': doc_ref.id,
+            'path_usado': path_used,
             'data': gasto
         }), 201
     except Exception as e:
