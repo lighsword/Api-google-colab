@@ -1822,25 +1822,24 @@ def get_usuario_firebase(usuario_id):
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
-        # Intentar obtener el documento del usuario
-        doc = db.collection('gestofin').collection('users').document(usuario_id).get()
+        # Obtener referencia al documento del usuario en gestofin/users
+        usuario_ref = db.collection('gestofin').collection('users').document(usuario_id)
+        usuario_doc = usuario_ref.get()
         
-        if doc.exists:
-            usuario = doc.to_dict()
-            usuario['id'] = doc.id
-        else:
-            # Si no existe, crear una estructura básica con el ID del usuario
-            usuario = {
-                'id': usuario_id,
-                'createdAt': datetime.now().isoformat()
-            }
-            # Intentar obtener el budget desde la subcollection
-            try:
-                budget_doc = db.collection('gestofin').collection('users').document(usuario_id).collection('budget').document('current').get()
-                if budget_doc.exists:
-                    usuario['budget'] = budget_doc.to_dict()
-            except:
-                pass
+        usuario = {
+            'id': usuario_id
+        }
+        
+        if usuario_doc.exists:
+            usuario.update(usuario_doc.to_dict())
+        
+        # Intentar obtener el budget desde la subcollection budget/current
+        try:
+            budget_doc = usuario_ref.collection('budget').document('current').get()
+            if budget_doc.exists:
+                usuario['budget'] = budget_doc.to_dict()
+        except Exception:
+            pass
         
         return jsonify({
             'status': 'success',
