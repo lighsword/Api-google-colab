@@ -1968,8 +1968,19 @@ def get_gastos_procesados_firebase(usuario_id):
         # Procesar gastos con pandas
         df = pd.DataFrame(gastos)
         
-        # Resumen por categoría - Usar 'cantidad'
-        resumen = df.groupby('categoria')['cantidad'].agg(['sum', 'count', 'mean']).round(2).to_dict()
+        # Elegir columna métrica disponible: 'cantidad' (preferida) o 'monto' (fallback)
+        metric_col = 'cantidad' if 'cantidad' in df.columns else ('monto' if 'monto' in df.columns else None)
+        if not metric_col:
+            return jsonify({
+                'status': 'success',
+                'usuario_id': usuario_id,
+                'mensaje': 'No hay columna de monto/cantidad en los gastos',
+                'path_usado': path_used,
+                'data': gastos
+            }), 200
+        
+        # Resumen por categoría usando la métrica disponible
+        resumen = df.groupby('categoria')[metric_col].agg(['sum', 'count', 'mean']).round(2).to_dict()
         
         return jsonify({
             'status': 'success',
