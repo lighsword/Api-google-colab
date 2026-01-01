@@ -1901,7 +1901,19 @@ def get_gastos_firebase(usuario_id):
         except Exception:
             pass
         
-        # Intento 2 (fallback): users/{uid}/gastos
+        # Intento 2 (fallback): gestofin/users/{uid}/gastos
+        if not gastos:
+            try:
+                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'gestofin/users/{usuario_id}/gastos'
+                for doc in docs:
+                    gasto = doc.to_dict()
+                    gasto['id'] = doc.id
+                    gastos.append(gasto)
+            except Exception:
+                pass
+
+        # Intento 3 (fallback): users/{uid}/gastos
         if not gastos:
             try:
                 docs = db.collection('users').document(usuario_id).collection('gastos').stream()
@@ -1945,7 +1957,19 @@ def get_gastos_procesados_firebase(usuario_id):
         except Exception:
             pass
         
-        # Intento 2 (fallback): users/{uid}/gastos
+        # Intento 2 (fallback): gestofin/users/{uid}/gastos
+        if not gastos:
+            try:
+                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
+                path_used = f'gestofin/users/{usuario_id}/gastos'
+                for doc in docs:
+                    gasto = doc.to_dict()
+                    gasto['id'] = doc.id
+                    gastos.append(gasto)
+            except Exception:
+                pass
+
+        # Intento 3 (fallback): users/{uid}/gastos
         if not gastos:
             try:
                 docs = db.collection('users').document(usuario_id).collection('gastos').stream()
@@ -2025,9 +2049,14 @@ def crear_gasto_firebase(usuario_id):
             doc_ref.set(gasto)
             path_used = f'gestofin/{usuario_id}/gastos/{doc_ref.id}'
         except Exception:
-            doc_ref = db.collection('users').document(usuario_id).collection('gastos').document()
-            doc_ref.set(gasto)
-            path_used = f'users/{usuario_id}/gastos/{doc_ref.id}'
+            try:
+                doc_ref = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').document()
+                doc_ref.set(gasto)
+                path_used = f'gestofin/users/{usuario_id}/gastos/{doc_ref.id}'
+            except Exception:
+                doc_ref = db.collection('users').document(usuario_id).collection('gastos').document()
+                doc_ref.set(gasto)
+                path_used = f'users/{usuario_id}/gastos/{doc_ref.id}'
         
         return jsonify({
             'status': 'success',
