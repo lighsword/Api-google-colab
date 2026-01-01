@@ -1829,16 +1829,10 @@ def get_usuario_firebase(usuario_id):
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
-        # Obtener referencia: gestofin → users (documento) → usuario_id (colección)
-        usuario_ref = db.collection('gestofin').document('users').collection(usuario_id)
-        
-        usuario = {
-            'id': usuario_id
-        }
-        
-        # Obtener el documento 'current' de la colección budget
+        # Estructura correcta: gestofin (colección) → {usuario_id} (documento) → budget (subcolección) → current (documento)
+        usuario = {'id': usuario_id}
         try:
-            budget_doc = usuario_ref.document('current').get()
+            budget_doc = db.collection('gestofin').document(usuario_id).collection('budget').document('current').get()
             if budget_doc.exists:
                 usuario['budget'] = budget_doc.to_dict()
         except Exception:
@@ -1860,8 +1854,8 @@ def get_gastos_firebase(usuario_id):
     
     try:
         gastos = []
-        # Path: gestofin (colección) -> users (documento) -> {usuario_id} (subcolección) -> gastos (subcolección)
-        docs = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').stream()
+        # Path correcta: gestofin (colección) → {usuario_id} (documento) → gastos (subcolección)
+        docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1887,7 +1881,7 @@ def get_gastos_procesados_firebase(usuario_id):
     
     try:
         gastos = []
-        docs = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').stream()
+        docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
         
         for doc in docs:
             gasto = doc.to_dict()
@@ -1943,8 +1937,8 @@ def crear_gasto_firebase(usuario_id):
             'createdAt': datetime.now().isoformat()
         }
         
-        # Guardar en Firebase
-        doc_ref = db.collection('gestofin').document('users').collection(usuario_id).collection('gastos').document()
+        # Guardar en Firebase: gestofin/{usuario_id}/gastos/{nuevo}
+        doc_ref = db.collection('gestofin').document(usuario_id).collection('gastos').document()
         doc_ref.set(gasto)
         
         return jsonify({
