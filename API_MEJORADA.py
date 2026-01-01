@@ -2019,6 +2019,9 @@ def get_gastos_procesados_firebase(usuario_id):
             'data': gastos
         }), 200
 
+    except Exception as e:
+        return jsonify({'error': f'Error procesando gastos: {str(e)}'}), 500
+
 
 @app.route('/api/v2/firebase/users/<usuario_id>/gastos-ids', methods=['GET'])
 def get_gastos_ids(usuario_id):
@@ -2060,8 +2063,6 @@ def get_gastos_ids(usuario_id):
         }), 200
     except Exception as e:
         return jsonify({'error': f'Error listando IDs de gastos: {str(e)}'}), 500
-    except Exception as e:
-        return jsonify({'error': f'Error procesando gastos: {str(e)}'}), 500
 
 
 @app.route('/api/v2/firebase/users/<usuario_id>/gastos', methods=['POST'])
