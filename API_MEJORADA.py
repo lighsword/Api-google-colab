@@ -61,7 +61,9 @@ try:
     # Opción 1: Usar archivo JSON si existe localmente
     if os.path.exists('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json'):
         cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
-        firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred, {
+            'projectId': 'gestor-financiero-28ac2',
+        })
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde archivo JSON)")
@@ -80,7 +82,9 @@ try:
             "client_x509_cert_url": os.getenv('FIREBASE_CLIENT_CERT_URL')
         }
         cred = credentials.Certificate(firebase_config)
-        firebase_admin.initialize_app(cred)
+        firebase_admin.initialize_app(cred, {
+            'projectId': os.getenv('FIREBASE_PROJECT_ID'),
+        })
         db = firestore.client()
         FIREBASE_AVAILABLE = True
         print("✅ Firebase conectado correctamente (desde variables de entorno)")
