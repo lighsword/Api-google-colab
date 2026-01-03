@@ -35,6 +35,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from werkzeug.exceptions import BadRequest
+from firebase_admin import auth as firebase_auth
 from functools import wraps
 import jwt
 import uuid
@@ -1813,38 +1814,65 @@ def health():
 # 🔥 ENDPOINTS DE FIREBASE - CONSUMIR DATOS DEL APP FLUTTER
 # ============================================================
 
+@app.route('/api/v2/firebase/debug', methods=['GET'])
+def firebase_debug():
+    """Diagnóstico de conexión Firestore: proyecto, colecciones y prueba de lectura"""
+    try:
+        info = {
+            'firebase_available': bool(FIREBASE_AVAILABLE),
+        }
+        if not FIREBASE_AVAILABLE:
+            return jsonify({'status': 'error', 'message': 'Firebase no disponible', 'data': info}), 503
+        
+        # Proyecto
+        import firebase_admin as _fb
+        app_opts = _fb.get_app().options if _fb.get_app() else {}
+        info['projectId'] = app_opts.get('projectId')
+        info['env_projectId'] = os.getenv('FIREBASE_PROJECT_ID')
+        
+        # Colecciones top-level
+        try:
+            top_cols = [c.id for c in db.collections()]
+        except Exception as e:
+            top_cols = [f'error_listando: {str(e)}']
+        info['collections'] = top_cols
+        
+        # Prueba de lectura en users
+        try:
+            users_docs = list(db.collection('users').limit(5).stream())
+            info['users_count'] = len(users_docs)
+            info['users_ids'] = [d.id for d in users_docs]
+        except Exception as e:
+            info['users_error'] = str(e)
+        
+        # Prueba de lectura de gastos del primer usuario
+        if info.get('users_ids'):
+            try:
+                first_user = info['users_ids'][0]
+                gastos_docs = list(db.collection('users').document(first_user).collection('gastos').limit(3).stream())
+                info['gastos_sample'] = {
+                    'user_id': first_user,
+                    'count': len(gastos_docs),
+                    'ids': [d.id for d in gastos_docs]
+                }
+            except Exception as e:
+                info['gastos_error'] = str(e)
+        
+        return jsonify({'status': 'success', 'data': info}), 200
+    except Exception as e:
+        return jsonify({'error': f'Debug Firestore: {str(e)}'}), 500
+
+
 @app.route('/api/v2/firebase/usuarios', methods=['GET'])
 def get_usuarios_firebase():
-    """Obtiene todos los usuarios registrados en Firebase"""
+    """Obtiene todos los usuarios registrados en Firebase (colección users)"""
     if not FIREBASE_AVAILABLE:
         return jsonify({'error': 'Firebase no disponible'}), 503
     
-    @app.route('/api/v2/firebase/debug', methods=['GET'])
-    def firebase_debug():
-        """Diagnóstico de conexión Firestore: proyecto y colecciones"""
-        try:
-            info = {
-                'firebase_available': bool(FIREBASE_AVAILABLE),
-            }
-            if not FIREBASE_AVAILABLE:
-                return jsonify({'status': 'error', 'message': 'Firebase no disponible', 'data': info}), 503
-            # Proyecto
-            import firebase_admin as _fb
-            app_opts = _fb.get_app().options if _fb.get_app() else {}
-            info['projectId'] = app_opts.get('projectId')
-            info['env_projectId'] = os.getenv('FIREBASE_PROJECT_ID')
-            # Colecciones top-level
-            try:
-                top_cols = [c.id for c in db.collections()]
-            except Exception as e:
-                top_cols = [f'error_listando: {str(e)}']
-            info['collections'] = top_cols
-            return jsonify({'status': 'success', 'data': info}), 200
-        except Exception as e:
-            return jsonify({'error': f'Debug Firestore: {str(e)}'}), 500
     try:
         usuarios = []
-        docs = db.collection('gestofin').collection('users').stream()
+        # Leer directamente de la colección 'users'
+        docs = db.collection('users').stream()
         
         for doc in docs:
             usuario = doc.to_dict()
@@ -1886,47 +1914,43 @@ def get_usuario_firebase(usuario_id):
 
 @app.route('/api/v2/firebase/users/<usuario_id>/gastos', methods=['GET'])
 def get_gastos_firebase(usuario_id):
-    """Obtiene todos los gastos de un usuario desde Firebase"""
+    """Obtiene todos los gastos de un usuario desde Firebase (path: users/{userId}/gastos)"""
     if not FIREBASE_AVAILABLE:
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
         gastos = []
-        path_used = None
-        # Intento 1: gestofin/{uid}/gastos
+        path_used = f'users/{usuario_id}/gastos'
+        error_detail = None
+        
+        # Path único según tu estructura Firebase: users/{uid}/gastos
         try:
-            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
-            path_used = f'gestofin/{usuario_id}/gastos'
+            docs = db.collection('users').document(usuario_id).collection('gastos').stream()
             for doc in docs:
                 gasto = doc.to_dict()
                 gasto['id'] = doc.id
                 gastos.append(gasto)
-        except Exception:
-            pass
+        except Exception as e:
+            error_detail = str(e)
         
-        # Intento 2 (fallback): gestofin/users/{uid}/gastos
+        # Si no hay gastos, verificar si el usuario existe
         if not gastos:
             try:
-                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'gestofin/users/{usuario_id}/gastos'
-                for doc in docs:
-                    gasto = doc.to_dict()
-                    gasto['id'] = doc.id
-                    gastos.append(gasto)
+                user_doc = db.collection('users').document(usuario_id).get()
+                user_exists = user_doc.exists
             except Exception:
-                pass
-
-        # Intento 3 (fallback): users/{uid}/gastos
-        if not gastos:
-            try:
-                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'users/{usuario_id}/gastos'
-                for doc in docs:
-                    gasto = doc.to_dict()
-                    gasto['id'] = doc.id
-                    gastos.append(gasto)
-            except Exception:
-                pass
+                user_exists = False
+            
+            return jsonify({
+                'status': 'success',
+                'usuario_id': usuario_id,
+                'total_gastos': 0,
+                'path_usado': path_used,
+                'user_exists': user_exists,
+                'error_detail': error_detail,
+                'data': [],
+                'message': 'No se encontraron gastos' if user_exists else 'Usuario no existe en Firebase'
+            }), 200
         
         return jsonify({
             'status': 'success',
@@ -1948,41 +1972,17 @@ def get_gastos_procesados_firebase(usuario_id):
     
     try:
         gastos = []
-        path_used = None
-        # Intento 1: gestofin/{uid}/gastos
+        path_used = f'users/{usuario_id}/gastos'
+        
+        # Path único: users/{uid}/gastos
         try:
-            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
-            path_used = f'gestofin/{usuario_id}/gastos'
+            docs = db.collection('users').document(usuario_id).collection('gastos').stream()
             for doc in docs:
                 gasto = doc.to_dict()
                 gasto['id'] = doc.id
                 gastos.append(gasto)
-        except Exception:
-            pass
-        
-        # Intento 2 (fallback): gestofin/users/{uid}/gastos
-        if not gastos:
-            try:
-                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'gestofin/users/{usuario_id}/gastos'
-                for doc in docs:
-                    gasto = doc.to_dict()
-                    gasto['id'] = doc.id
-                    gastos.append(gasto)
-            except Exception:
-                pass
-
-        # Intento 3 (fallback): users/{uid}/gastos
-        if not gastos:
-            try:
-                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'users/{usuario_id}/gastos'
-                for doc in docs:
-                    gasto = doc.to_dict()
-                    gasto['id'] = doc.id
-                    gastos.append(gasto)
-            except Exception:
-                pass
+        except Exception as e:
+            return jsonify({'error': f'Error leyendo gastos: {str(e)}'}), 500
         
         if not gastos:
             return jsonify({
@@ -2031,30 +2031,15 @@ def get_gastos_ids(usuario_id):
         return jsonify({'error': 'Firebase no disponible'}), 503
     try:
         ids = []
-        path_used = None
-        # Try gestofin/{uid}/gastos
+        path_used = f'users/{usuario_id}/gastos'
+        
+        # Path único: users/{uid}/gastos
         try:
-            docs = db.collection('gestofin').document(usuario_id).collection('gastos').stream()
-            path_used = f'gestofin/{usuario_id}/gastos'
+            docs = db.collection('users').document(usuario_id).collection('gastos').stream()
             ids = [doc.id for doc in docs]
-        except Exception:
-            pass
-        # Try gestofin/users/{uid}/gastos
-        if not ids:
-            try:
-                docs = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'gestofin/users/{usuario_id}/gastos'
-                ids = [doc.id for doc in docs]
-            except Exception:
-                pass
-        # Try users/{uid}/gastos
-        if not ids:
-            try:
-                docs = db.collection('users').document(usuario_id).collection('gastos').stream()
-                path_used = f'users/{usuario_id}/gastos'
-                ids = [doc.id for doc in docs]
-            except Exception:
-                pass
+        except Exception as e:
+            return jsonify({'error': f'Error leyendo IDs: {str(e)}'}), 500
+        
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
@@ -2109,20 +2094,25 @@ def crear_gasto_firebase(usuario_id):
             'createdAt': datetime.now().isoformat()
         }
         
-        # Guardar en Firebase: intentar en gestofin/{uid}/gastos, si falla, en users/{uid}/gastos
-        try:
-            doc_ref = db.collection('gestofin').document(usuario_id).collection('gastos').document()
-            doc_ref.set(gasto)
-            path_used = f'gestofin/{usuario_id}/gastos/{doc_ref.id}'
-        except Exception:
+        # Verificación opcional de Firebase ID Token para respetar reglas de escritura
+        id_token = request.headers.get('X-Firebase-Id-Token')
+        if id_token:
             try:
-                doc_ref = db.collection('gestofin').collection('users').document(usuario_id).collection('gastos').document()
-                doc_ref.set(gasto)
-                path_used = f'gestofin/users/{usuario_id}/gastos/{doc_ref.id}'
-            except Exception:
-                doc_ref = db.collection('users').document(usuario_id).collection('gastos').document()
-                doc_ref.set(gasto)
-                path_used = f'users/{usuario_id}/gastos/{doc_ref.id}'
+                decoded = firebase_auth.verify_id_token(id_token)
+                uid = decoded.get('uid')
+                if uid != usuario_id:
+                    return jsonify({'error': 'UID del token no coincide con usuario_id'}), 403
+            except Exception as e:
+                return jsonify({'error': 'ID token inválido', 'detalle': str(e)}), 401
+
+        # Guardar en Firebase: path único users/{uid}/gastos
+        path_used = f'users/{usuario_id}/gastos'
+        try:
+            doc_ref = db.collection('users').document(usuario_id).collection('gastos').document()
+            doc_ref.set(gasto)
+            path_used = f'{path_used}/{doc_ref.id}'
+        except Exception as e:
+            return jsonify({'error': f'Error escribiendo en Firebase: {str(e)}'}), 500
         
         return jsonify({
             'status': 'success',
