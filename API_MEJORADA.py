@@ -2783,6 +2783,815 @@ if __name__ == '__main__':
     print("\n⚠️  NOTA: Tokens válidos por 24 horas. Generar nuevo si expira.")
     print("="*80 + "\n")
 
+
+# ============================================================
+# 🤖 ASESOR FINANCIERO IA - ENDPOINTS AVANZADOS
+# ============================================================
+# Integra análisis completo de Firebase con:
+# 1. Predicción de gastos futuros
+# 2. Análisis estadístico avanzado
+# 3. Recomendaciones personalizadas de ahorro
+# 4. Datos para gráficos interactivos
+# ============================================================
+
+def obtener_gastos_firebase(usuario_id):
+    """Obtiene todos los gastos de un usuario desde Firebase"""
+    if not FIREBASE_AVAILABLE or not db:
+        return None, "Firebase no disponible"
+    
+    try:
+        gastos_ref = db.collection('users').document(usuario_id).collection('gastos')
+        gastos_docs = gastos_ref.stream()
+        
+        gastos = []
+        for doc in gastos_docs:
+            gasto = doc.to_dict()
+            gasto['id'] = doc.id
+            gastos.append(gasto)
+        
+        return gastos, None
+    except Exception as e:
+        return None, str(e)
+
+
+def procesar_fecha(fecha_str):
+    """Convierte diferentes formatos de fecha a datetime"""
+    if fecha_str is None:
+        return datetime.now()
+    
+    if isinstance(fecha_str, datetime):
+        return fecha_str
+    
+    formatos = [
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
+        '%Y-%m-%d',
+        '%d/%m/%Y',
+        '%d-%m-%Y'
+    ]
+    
+    for fmt in formatos:
+        try:
+            return datetime.strptime(str(fecha_str)[:26], fmt)
+        except:
+            continue
+    
+    return datetime.now()
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/asesor-financiero', methods=['GET'])
+@token_required
+def asesor_financiero_completo(usuario_id):
+    """
+    🤖 ASESOR FINANCIERO IA COMPLETO
+    
+    Devuelve análisis integral con:
+    - Predicciones de gastos futuros (próximos 30 días)
+    - Análisis estadístico completo
+    - Recomendaciones personalizadas de ahorro
+    - Datos preparados para gráficos
+    """
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        # Obtener gastos de Firebase
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': f'Error obteniendo gastos: {error}'}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Se necesitan al menos 3 gastos registrados para el análisis',
+                'gastos_actuales': len(gastos) if gastos else 0
+            }), 400
+        
+        # Convertir a DataFrame
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        df['mes'] = df['fecha'].dt.month
+        df['año'] = df['fecha'].dt.year
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        df['dia_mes'] = df['fecha'].dt.day
+        df['semana'] = df['fecha'].dt.isocalendar().week
+        
+        # ============================================
+        # 1. PREDICCIÓN DE GASTOS FUTUROS
+        # ============================================
+        predicciones = generar_predicciones(df)
+        
+        # ============================================
+        # 2. ANÁLISIS ESTADÍSTICO
+        # ============================================
+        analisis = generar_analisis_estadistico(df)
+        
+        # ============================================
+        # 3. RECOMENDACIONES DE AHORRO
+        # ============================================
+        recomendaciones = generar_recomendaciones(df, analisis)
+        
+        # ============================================
+        # 4. DATOS PARA GRÁFICOS
+        # ============================================
+        graficos = preparar_datos_graficos(df)
+        
+        # Puntuación financiera (gamificación)
+        score = calcular_score_financiero(df, analisis)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'fecha_analisis': datetime.now().isoformat(),
+            'resumen': {
+                'total_gastos_registrados': len(gastos),
+                'gasto_total': round(df['cantidad'].sum(), 2),
+                'gasto_promedio': round(df['cantidad'].mean(), 2),
+                'periodo_analizado': {
+                    'desde': df['fecha'].min().strftime('%Y-%m-%d'),
+                    'hasta': df['fecha'].max().strftime('%Y-%m-%d'),
+                    'dias': (df['fecha'].max() - df['fecha'].min()).days
+                }
+            },
+            'score_financiero': score,
+            'predicciones': predicciones,
+            'analisis_estadistico': analisis,
+            'recomendaciones': recomendaciones,
+            'graficos': graficos
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': f'Error en asesor financiero: {str(e)}',
+            'detalle': traceback.format_exc()
+        }), 500
+
+
+def generar_predicciones(df):
+    """Genera predicciones de gastos futuros"""
+    predicciones = {
+        'proximo_mes': {},
+        'por_categoria': {},
+        'tendencia': '',
+        'alerta_gastos': []
+    }
+    
+    try:
+        # Gasto diario promedio
+        dias_unicos = df['fecha'].dt.date.nunique()
+        gasto_diario = df['cantidad'].sum() / max(dias_unicos, 1)
+        
+        # Predicción próximo mes (30 días)
+        prediccion_mes = round(gasto_diario * 30, 2)
+        
+        # Calcular tendencia usando regresión
+        df_agrupado = df.groupby(df['fecha'].dt.date)['cantidad'].sum().reset_index()
+        df_agrupado['dias'] = range(len(df_agrupado))
+        
+        tendencia_valor = 0
+        if len(df_agrupado) >= 3:
+            X = df_agrupado['dias'].values.reshape(-1, 1)
+            y = df_agrupado['cantidad'].values
+            modelo = LinearRegression()
+            modelo.fit(X, y)
+            tendencia_valor = modelo.coef_[0]
+        
+        if tendencia_valor > 0.5:
+            tendencia = 'AUMENTANDO'
+            prediccion_ajustada = prediccion_mes * 1.1
+        elif tendencia_valor < -0.5:
+            tendencia = 'DISMINUYENDO'
+            prediccion_ajustada = prediccion_mes * 0.9
+        else:
+            tendencia = 'ESTABLE'
+            prediccion_ajustada = prediccion_mes
+        
+        predicciones['proximo_mes'] = {
+            'estimacion_base': prediccion_mes,
+            'estimacion_ajustada': round(prediccion_ajustada, 2),
+            'gasto_diario_promedio': round(gasto_diario, 2),
+            'confianza': 'ALTA' if len(df) > 20 else 'MEDIA' if len(df) > 10 else 'BAJA'
+        }
+        
+        predicciones['tendencia'] = tendencia
+        
+        # Predicción por categoría
+        for categoria in df['categoria'].unique():
+            df_cat = df[df['categoria'] == categoria]
+            dias_cat = df_cat['fecha'].dt.date.nunique()
+            gasto_cat_diario = df_cat['cantidad'].sum() / max(dias_cat, 1)
+            predicciones['por_categoria'][categoria] = {
+                'prediccion_30_dias': round(gasto_cat_diario * 30, 2),
+                'promedio_por_gasto': round(df_cat['cantidad'].mean(), 2),
+                'total_registros': len(df_cat)
+            }
+        
+        # Alertas de gastos altos
+        gasto_promedio = df['cantidad'].mean()
+        gasto_std = df['cantidad'].std()
+        umbral = gasto_promedio + (1.5 * gasto_std)
+        
+        for categoria in df['categoria'].unique():
+            gasto_cat = df[df['categoria'] == categoria]['cantidad'].mean()
+            if gasto_cat > umbral:
+                predicciones['alerta_gastos'].append({
+                    'categoria': categoria,
+                    'mensaje': f'Gastos elevados en {categoria}',
+                    'promedio': round(gasto_cat, 2),
+                    'umbral': round(umbral, 2)
+                })
+    
+    except Exception as e:
+        predicciones['error'] = str(e)
+    
+    return predicciones
+
+
+def generar_analisis_estadistico(df):
+    """Genera análisis estadístico completo"""
+    analisis = {
+        'por_categoria': {},
+        'por_mes': {},
+        'por_dia_semana': {},
+        'comparativas': {},
+        'outliers': [],
+        'patrones': {}
+    }
+    
+    try:
+        # Análisis por categoría
+        for categoria in df['categoria'].unique():
+            df_cat = df[df['categoria'] == categoria]
+            analisis['por_categoria'][categoria] = {
+                'total': round(df_cat['cantidad'].sum(), 2),
+                'promedio': round(df_cat['cantidad'].mean(), 2),
+                'maximo': round(df_cat['cantidad'].max(), 2),
+                'minimo': round(df_cat['cantidad'].min(), 2),
+                'desviacion': round(df_cat['cantidad'].std(), 2) if len(df_cat) > 1 else 0,
+                'cantidad_gastos': len(df_cat),
+                'porcentaje_total': round((df_cat['cantidad'].sum() / df['cantidad'].sum()) * 100, 2)
+            }
+        
+        # Análisis por mes
+        dias_semana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+        
+        for mes in df['mes'].unique():
+            df_mes = df[df['mes'] == mes]
+            nombre_mes = meses[int(mes) - 1] if 1 <= mes <= 12 else f'Mes {mes}'
+            analisis['por_mes'][nombre_mes] = {
+                'total': round(df_mes['cantidad'].sum(), 2),
+                'promedio': round(df_mes['cantidad'].mean(), 2),
+                'cantidad_gastos': len(df_mes),
+                'categoria_top': df_mes.groupby('categoria')['cantidad'].sum().idxmax() if len(df_mes) > 0 else None
+            }
+        
+        # Análisis por día de semana
+        for dia in df['dia_semana'].unique():
+            df_dia = df[df['dia_semana'] == dia]
+            nombre_dia = dias_semana[int(dia)] if 0 <= dia <= 6 else f'Día {dia}'
+            analisis['por_dia_semana'][nombre_dia] = {
+                'total': round(df_dia['cantidad'].sum(), 2),
+                'promedio': round(df_dia['cantidad'].mean(), 2),
+                'cantidad_gastos': len(df_dia)
+            }
+        
+        # Comparativa mes actual vs anterior
+        hoy = datetime.now()
+        mes_actual = hoy.month
+        año_actual = hoy.year
+        
+        df_mes_actual = df[(df['mes'] == mes_actual) & (df['año'] == año_actual)]
+        
+        if mes_actual == 1:
+            mes_anterior = 12
+            año_anterior = año_actual - 1
+        else:
+            mes_anterior = mes_actual - 1
+            año_anterior = año_actual
+        
+        df_mes_anterior = df[(df['mes'] == mes_anterior) & (df['año'] == año_anterior)]
+        
+        gasto_actual = df_mes_actual['cantidad'].sum()
+        gasto_anterior = df_mes_anterior['cantidad'].sum()
+        
+        if gasto_anterior > 0:
+            variacion = ((gasto_actual - gasto_anterior) / gasto_anterior) * 100
+        else:
+            variacion = 100 if gasto_actual > 0 else 0
+        
+        analisis['comparativas']['mes_actual_vs_anterior'] = {
+            'mes_actual': {
+                'nombre': meses[mes_actual - 1],
+                'total': round(gasto_actual, 2),
+                'cantidad_gastos': len(df_mes_actual)
+            },
+            'mes_anterior': {
+                'nombre': meses[mes_anterior - 1],
+                'total': round(gasto_anterior, 2),
+                'cantidad_gastos': len(df_mes_anterior)
+            },
+            'variacion_porcentaje': round(variacion, 2),
+            'tendencia': 'AUMENTO' if variacion > 5 else 'DISMINUCIÓN' if variacion < -5 else 'ESTABLE'
+        }
+        
+        # Detectar outliers (gastos inusuales)
+        Q1 = df['cantidad'].quantile(0.25)
+        Q3 = df['cantidad'].quantile(0.75)
+        IQR = Q3 - Q1
+        umbral_superior = Q3 + 1.5 * IQR
+        
+        outliers_df = df[df['cantidad'] > umbral_superior]
+        for _, row in outliers_df.iterrows():
+            analisis['outliers'].append({
+                'categoria': row['categoria'],
+                'cantidad': round(row['cantidad'], 2),
+                'fecha': row['fecha'].strftime('%Y-%m-%d'),
+                'descripcion': row.get('descripcion', ''),
+                'motivo': 'Gasto significativamente mayor al promedio'
+            })
+        
+        # Patrones detectados
+        dia_mas_gasto = df.groupby('dia_semana')['cantidad'].sum().idxmax()
+        categoria_mas_frecuente = df['categoria'].value_counts().idxmax()
+        hora_pico = None  # Si tuviéramos hora
+        
+        analisis['patrones'] = {
+            'dia_mas_gastos': dias_semana[int(dia_mas_gasto)] if 0 <= dia_mas_gasto <= 6 else 'N/A',
+            'categoria_mas_frecuente': categoria_mas_frecuente,
+            'gasto_promedio_general': round(df['cantidad'].mean(), 2),
+            'gasto_mediano': round(df['cantidad'].median(), 2)
+        }
+        
+    except Exception as e:
+        analisis['error'] = str(e)
+    
+    return analisis
+
+
+def generar_recomendaciones(df, analisis):
+    """Genera recomendaciones personalizadas de ahorro"""
+    recomendaciones = {
+        'ahorro': [],
+        'alertas': [],
+        'metas_sugeridas': [],
+        'tips_personalizados': []
+    }
+    
+    try:
+        gasto_total = df['cantidad'].sum()
+        gasto_promedio = df['cantidad'].mean()
+        
+        # Analizar categorías con mayor gasto
+        gastos_categoria = df.groupby('categoria')['cantidad'].sum().sort_values(ascending=False)
+        
+        # Top 3 categorías con más gasto
+        for i, (categoria, total) in enumerate(gastos_categoria.head(3).items()):
+            porcentaje = (total / gasto_total) * 100
+            
+            if porcentaje > 40:
+                recomendaciones['alertas'].append({
+                    'tipo': 'GASTO_EXCESIVO',
+                    'categoria': categoria,
+                    'mensaje': f'⚠️ {categoria} representa el {porcentaje:.1f}% de tus gastos. Considera reducirlo.',
+                    'porcentaje': round(porcentaje, 2),
+                    'monto': round(total, 2)
+                })
+                
+                ahorro_sugerido = total * 0.2  # Sugerir reducir 20%
+                recomendaciones['ahorro'].append({
+                    'categoria': categoria,
+                    'ahorro_potencial': round(ahorro_sugerido, 2),
+                    'estrategia': f'Reducir gastos en {categoria} un 20% podría ahorrarte ${ahorro_sugerido:.2f}',
+                    'prioridad': 'ALTA'
+                })
+            
+            elif porcentaje > 25:
+                recomendaciones['ahorro'].append({
+                    'categoria': categoria,
+                    'ahorro_potencial': round(total * 0.15, 2),
+                    'estrategia': f'Optimizar gastos en {categoria} (representa {porcentaje:.1f}% del total)',
+                    'prioridad': 'MEDIA'
+                })
+        
+        # Metas sugeridas basadas en patrones
+        gasto_mensual_promedio = gasto_total / max(df['mes'].nunique(), 1)
+        
+        recomendaciones['metas_sugeridas'] = [
+            {
+                'tipo': 'AHORRO_MENSUAL',
+                'meta': round(gasto_mensual_promedio * 0.1, 2),
+                'descripcion': f'Ahorrar el 10% de tu gasto mensual (${gasto_mensual_promedio * 0.1:.2f})',
+                'dificultad': 'FÁCIL'
+            },
+            {
+                'tipo': 'AHORRO_AGRESIVO',
+                'meta': round(gasto_mensual_promedio * 0.25, 2),
+                'descripcion': f'Meta agresiva: Ahorrar 25% mensual (${gasto_mensual_promedio * 0.25:.2f})',
+                'dificultad': 'DIFÍCIL'
+            },
+            {
+                'tipo': 'REDUCCION_CATEGORIA',
+                'categoria': gastos_categoria.index[0],
+                'meta': round(gastos_categoria.iloc[0] * 0.15, 2),
+                'descripcion': f'Reducir {gastos_categoria.index[0]} en 15%',
+                'dificultad': 'MEDIA'
+            }
+        ]
+        
+        # Tips personalizados
+        comparativa = analisis.get('comparativas', {}).get('mes_actual_vs_anterior', {})
+        variacion = comparativa.get('variacion_porcentaje', 0)
+        
+        if variacion > 20:
+            recomendaciones['tips_personalizados'].append({
+                'icono': '📈',
+                'titulo': 'Gastos en aumento',
+                'mensaje': f'Tus gastos aumentaron {variacion:.1f}% este mes. Revisa tus compras recientes.',
+                'accion': 'Establece un presupuesto diario'
+            })
+        elif variacion < -10:
+            recomendaciones['tips_personalizados'].append({
+                'icono': '🎉',
+                'titulo': '¡Felicidades!',
+                'mensaje': f'Redujiste tus gastos {abs(variacion):.1f}% este mes. ¡Sigue así!',
+                'accion': 'Mantén este ritmo de ahorro'
+            })
+        
+        # Tips por día de la semana
+        patrones = analisis.get('patrones', {})
+        dia_mas_gastos = patrones.get('dia_mas_gastos', '')
+        
+        if dia_mas_gastos:
+            recomendaciones['tips_personalizados'].append({
+                'icono': '📅',
+                'titulo': f'Patrón detectado: {dia_mas_gastos}',
+                'mensaje': f'Los {dia_mas_gastos} son tu día de mayor gasto. Planifica con anticipación.',
+                'accion': f'Evita compras impulsivas los {dia_mas_gastos}'
+            })
+        
+        # Tip de categoría frecuente
+        cat_frecuente = patrones.get('categoria_mas_frecuente', '')
+        if cat_frecuente:
+            recomendaciones['tips_personalizados'].append({
+                'icono': '🔄',
+                'titulo': f'Categoría frecuente: {cat_frecuente}',
+                'mensaje': f'Gastas frecuentemente en {cat_frecuente}. Busca alternativas más económicas.',
+                'accion': f'Compara precios antes de gastar en {cat_frecuente}'
+            })
+        
+        # Tip general
+        recomendaciones['tips_personalizados'].append({
+            'icono': '💡',
+            'titulo': 'Regla 50/30/20',
+            'mensaje': 'Destina 50% a necesidades, 30% a deseos y 20% a ahorro.',
+            'accion': 'Revisa si cumples esta proporción'
+        })
+        
+    except Exception as e:
+        recomendaciones['error'] = str(e)
+    
+    return recomendaciones
+
+
+def preparar_datos_graficos(df):
+    """Prepara datos estructurados para gráficos en frontend"""
+    graficos = {}
+    
+    try:
+        # 1. Gráfico de pastel - Distribución por categoría
+        categorias = df.groupby('categoria')['cantidad'].sum()
+        graficos['pie_categorias'] = {
+            'tipo': 'pie',
+            'titulo': 'Distribución de Gastos por Categoría',
+            'labels': categorias.index.tolist(),
+            'values': [round(v, 2) for v in categorias.values],
+            'colors': ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#7CFC00', '#DC143C'][:len(categorias)]
+        }
+        
+        # 2. Gráfico de barras - Gastos por mes
+        meses_nombres = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+        gastos_mes = df.groupby('mes')['cantidad'].sum()
+        
+        graficos['bar_meses'] = {
+            'tipo': 'bar',
+            'titulo': 'Gastos por Mes',
+            'labels': [meses_nombres[int(m)-1] for m in gastos_mes.index],
+            'values': [round(v, 2) for v in gastos_mes.values],
+            'color': '#36A2EB'
+        }
+        
+        # 3. Gráfico de línea - Tendencia temporal
+        gastos_diarios = df.groupby(df['fecha'].dt.date)['cantidad'].sum().reset_index()
+        gastos_diarios.columns = ['fecha', 'total']
+        gastos_diarios = gastos_diarios.sort_values('fecha').tail(30)  # Últimos 30 días
+        
+        graficos['line_tendencia'] = {
+            'tipo': 'line',
+            'titulo': 'Tendencia de Gastos (Últimos 30 días)',
+            'labels': [str(f) for f in gastos_diarios['fecha'].values],
+            'values': [round(v, 2) for v in gastos_diarios['total'].values],
+            'color': '#FF6384'
+        }
+        
+        # 4. Gráfico de barras - Gastos por día de semana
+        dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        gastos_dia = df.groupby('dia_semana')['cantidad'].sum()
+        
+        graficos['bar_dias_semana'] = {
+            'tipo': 'bar',
+            'titulo': 'Gastos por Día de la Semana',
+            'labels': [dias[int(d)] for d in sorted(gastos_dia.index)],
+            'values': [round(gastos_dia.get(d, 0), 2) for d in sorted(gastos_dia.index)],
+            'color': '#4BC0C0'
+        }
+        
+        # 5. Heatmap data - Calendario de gastos
+        gastos_calendario = df.groupby([df['fecha'].dt.date])['cantidad'].sum()
+        graficos['heatmap_calendario'] = {
+            'tipo': 'heatmap',
+            'titulo': 'Calendario de Gastos',
+            'data': [
+                {'fecha': str(fecha), 'valor': round(valor, 2)}
+                for fecha, valor in gastos_calendario.items()
+            ]
+        }
+        
+        # 6. Comparativa de categorías (stacked bar)
+        cat_por_mes = df.groupby(['mes', 'categoria'])['cantidad'].sum().unstack(fill_value=0)
+        graficos['stacked_categorias_mes'] = {
+            'tipo': 'stacked_bar',
+            'titulo': 'Categorías por Mes',
+            'labels': [meses_nombres[int(m)-1] for m in cat_por_mes.index],
+            'datasets': [
+                {
+                    'label': cat,
+                    'data': [round(cat_por_mes.loc[m, cat] if cat in cat_por_mes.columns else 0, 2) for m in cat_por_mes.index]
+                }
+                for cat in df['categoria'].unique()
+            ]
+        }
+        
+        # 7. Top 5 gastos más grandes
+        top_gastos = df.nlargest(5, 'cantidad')[['categoria', 'cantidad', 'descripcion', 'fecha']]
+        graficos['top_gastos'] = {
+            'tipo': 'lista',
+            'titulo': 'Top 5 Gastos Más Grandes',
+            'data': [
+                {
+                    'categoria': row['categoria'],
+                    'cantidad': round(row['cantidad'], 2),
+                    'descripcion': row.get('descripcion', 'N/A'),
+                    'fecha': row['fecha'].strftime('%Y-%m-%d')
+                }
+                for _, row in top_gastos.iterrows()
+            ]
+        }
+        
+    except Exception as e:
+        graficos['error'] = str(e)
+    
+    return graficos
+
+
+def calcular_score_financiero(df, analisis):
+    """Calcula un score de salud financiera (gamificación)"""
+    score = 100
+    detalles = []
+    
+    try:
+        # Penalizar por gastos muy concentrados en una categoría
+        for cat, datos in analisis.get('por_categoria', {}).items():
+            if datos.get('porcentaje_total', 0) > 50:
+                score -= 15
+                detalles.append(f'-15: {cat} supera el 50% de gastos')
+            elif datos.get('porcentaje_total', 0) > 40:
+                score -= 10
+                detalles.append(f'-10: {cat} supera el 40% de gastos')
+        
+        # Penalizar por muchos outliers
+        outliers = len(analisis.get('outliers', []))
+        if outliers > 5:
+            score -= 10
+            detalles.append(f'-10: Demasiados gastos atípicos ({outliers})')
+        elif outliers > 2:
+            score -= 5
+            detalles.append(f'-5: Varios gastos atípicos ({outliers})')
+        
+        # Evaluar tendencia
+        comparativa = analisis.get('comparativas', {}).get('mes_actual_vs_anterior', {})
+        variacion = comparativa.get('variacion_porcentaje', 0)
+        
+        if variacion > 30:
+            score -= 15
+            detalles.append('-15: Aumento de gastos superior al 30%')
+        elif variacion > 15:
+            score -= 8
+            detalles.append('-8: Aumento de gastos superior al 15%')
+        elif variacion < -10:
+            score += 10
+            detalles.append('+10: Reducción de gastos superior al 10%')
+        
+        # Bonus por consistencia
+        if len(df) > 20:
+            score += 5
+            detalles.append('+5: Buen historial de registros')
+        
+        # Limitar entre 0 y 100
+        score = max(0, min(100, score))
+        
+        # Determinar nivel
+        if score >= 80:
+            nivel = 'EXCELENTE'
+            emoji = '🌟'
+            mensaje = '¡Excelente manejo financiero!'
+        elif score >= 60:
+            nivel = 'BUENO'
+            emoji = '👍'
+            mensaje = 'Buen control, con margen de mejora'
+        elif score >= 40:
+            nivel = 'REGULAR'
+            emoji = '⚠️'
+            mensaje = 'Hay áreas que necesitan atención'
+        else:
+            nivel = 'CRÍTICO'
+            emoji = '🚨'
+            mensaje = 'Requiere atención inmediata'
+        
+    except Exception as e:
+        return {'score': 50, 'nivel': 'ERROR', 'mensaje': str(e)}
+    
+    return {
+        'score': score,
+        'nivel': nivel,
+        'emoji': emoji,
+        'mensaje': mensaje,
+        'detalles': detalles
+    }
+
+
+# Endpoints adicionales separados para componentes específicos
+
+@app.route('/api/v2/firebase/users/<usuario_id>/predicciones', methods=['GET'])
+@token_required
+def obtener_predicciones(usuario_id):
+    """Obtiene solo las predicciones de gastos"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': error}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({'error': 'Datos insuficientes'}), 400
+        
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'predicciones': generar_predicciones(df)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/analisis', methods=['GET'])
+@token_required
+def obtener_analisis(usuario_id):
+    """Obtiene solo el análisis estadístico"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': error}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({'error': 'Datos insuficientes'}), 400
+        
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        df['mes'] = df['fecha'].dt.month
+        df['año'] = df['fecha'].dt.year
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'analisis': generar_analisis_estadistico(df)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/recomendaciones', methods=['GET'])
+@token_required
+def obtener_recomendaciones(usuario_id):
+    """Obtiene solo las recomendaciones de ahorro"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': error}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({'error': 'Datos insuficientes'}), 400
+        
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        df['mes'] = df['fecha'].dt.month
+        df['año'] = df['fecha'].dt.year
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        
+        analisis = generar_analisis_estadistico(df)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'recomendaciones': generar_recomendaciones(df, analisis)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/graficos', methods=['GET'])
+@token_required
+def obtener_graficos(usuario_id):
+    """Obtiene solo los datos para gráficos"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': error}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({'error': 'Datos insuficientes'}), 400
+        
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        df['mes'] = df['fecha'].dt.month
+        df['año'] = df['fecha'].dt.year
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'graficos': preparar_datos_graficos(df)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/firebase/users/<usuario_id>/score', methods=['GET'])
+@token_required
+def obtener_score(usuario_id):
+    """Obtiene el score financiero del usuario"""
+    if not FIREBASE_AVAILABLE:
+        return jsonify({'error': 'Firebase no disponible'}), 503
+    
+    try:
+        gastos, error = obtener_gastos_firebase(usuario_id)
+        if error:
+            return jsonify({'error': error}), 500
+        
+        if not gastos or len(gastos) < 3:
+            return jsonify({'error': 'Datos insuficientes'}), 400
+        
+        df = pd.DataFrame(gastos)
+        df['fecha'] = df['fecha'].apply(procesar_fecha)
+        df['cantidad'] = pd.to_numeric(df['cantidad'], errors='coerce').fillna(0)
+        df['mes'] = df['fecha'].dt.month
+        df['año'] = df['fecha'].dt.year
+        df['dia_semana'] = df['fecha'].dt.dayofweek
+        
+        analisis = generar_analisis_estadistico(df)
+        score = calcular_score_financiero(df, analisis)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'score_financiero': score
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('FLASK_ENV', 'development') == 'development'
