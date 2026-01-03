@@ -1916,15 +1916,26 @@ def get_usuarios_firebase():
 
 @app.route('/api/v2/firebase/usuarios/<usuario_id>', methods=['GET'])
 def get_usuario_firebase(usuario_id):
-    """Obtiene un usuario específico por ID"""
+    """Obtiene un usuario específico por ID con su budget"""
     if not FIREBASE_AVAILABLE:
         return jsonify({'error': 'Firebase no disponible'}), 503
     
     try:
-        # Estructura correcta: gestofin (colección) → {usuario_id} (documento) → budget (subcolección) → current (documento)
-        usuario = {'id': usuario_id}
+        # Obtener documento del usuario en users/{usuario_id}
+        user_doc = db.collection('users').document(usuario_id).get()
+        
+        if not user_doc.exists:
+            return jsonify({
+                'status': 'error',
+                'message': f'Usuario {usuario_id} no encontrado'
+            }), 404
+        
+        usuario = user_doc.to_dict()
+        usuario['id'] = user_doc.id
+        
+        # Intentar obtener budget si existe
         try:
-            budget_doc = db.collection('gestofin').document(usuario_id).collection('budget').document('current').get()
+            budget_doc = db.collection('users').document(usuario_id).collection('budget').document('current').get()
             if budget_doc.exists:
                 usuario['budget'] = budget_doc.to_dict()
         except Exception:

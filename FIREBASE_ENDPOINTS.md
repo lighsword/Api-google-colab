@@ -1,13 +1,63 @@
 # 🔥 ENDPOINTS FIREBASE - Guía de Uso
 
-Tu API ahora está integrada con Firebase. Aquí están los nuevos endpoints:
+Tu API está integrada con Firebase Firestore (base de datos: **gestofin**).
+
+## ✅ Estructura Firebase Confirmada
+
+```
+Base de datos: gestofin
+└── users/                              ← Colección de usuarios
+    ├── BCc7NaZ4KQTqFY3dUxgStWH62dh2/  ← Documento usuario
+    │   ├── accountType: "user"
+    │   ├── displayName: "yordan..."
+    │   ├── email: "yordan03224@hotmail.com"
+    │   ├── uid: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+    │   ├── budget/                     ← Subcolección
+    │   │   └── current/
+    │   └── gastos/                     ← Subcolección de gastos
+    │       ├── 5ZivLl6foLLSbfs5IU79/
+    │       │   ├── cantidad: 18.67
+    │       │   ├── categoria: "Transporte"
+    │       │   ├── descripcion: "taxi temprano"
+    │       │   ├── fecha: "2025-12-30T00:00:00.000"
+    │       │   └── userId: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+    │       └── ... más gastos
+    ├── qn6FfGYZboNB48n26hjyYPEt8L43/
+    └── sdyUylJAItaxjjVJEThKbhxeJFz2/
+```
+
+---
 
 ## 📋 Endpoints Firebase
+
+### 🔧 Debug - Verificar Conexión
+```
+GET /api/v2/firebase/debug
+```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/debug`
+
+**Respuesta:**
+```json
+{
+  "status": "success",
+  "data": {
+    "firebase_available": true,
+    "database_id": "gestofin",
+    "projectId": "gestor-financiero-28ac2",
+    "collections": ["ml_models", "users"],
+    "users_count": 3,
+    "users_ids": ["BCc7NaZ4KQTqFY3dUxgStWH62dh2", "..."]
+  }
+}
+```
+
+---
 
 ### 1️⃣ Obtener Todos los Usuarios
 ```
 GET /api/v2/firebase/usuarios
 ```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/usuarios`
 
 **Respuesta:**
 ```json
@@ -16,9 +66,10 @@ GET /api/v2/firebase/usuarios
   "total": 3,
   "data": [
     {
-      "id": "user123",
-      "email": "usuario@gmail.com",
-      "nombre": "Juan"
+      "id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
+      "email": "yordan03224@hotmail.com",
+      "displayName": "yordan alberto rojas de la cruz",
+      "accountType": "user"
     }
   ]
 }
@@ -30,11 +81,7 @@ GET /api/v2/firebase/usuarios
 ```
 GET /api/v2/firebase/usuarios/{usuario_id}
 ```
-
-**Ejemplo:**
-```
-GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/BCc7NaZ4KQTqFY3dUxgStWH62dh2
-```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/usuarios/BCc7NaZ4KQTqFY3dUxgStWH62dh2`
 
 **Respuesta:**
 ```json
@@ -42,8 +89,10 @@ GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/BCc7NaZ4KQTqF
   "status": "success",
   "data": {
     "id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
-    "email": "usuario@gmail.com",
-    "nombre": "Yordan"
+    "email": "yordan03224@hotmail.com",
+    "displayName": "yordan alberto rojas de la cruz",
+    "accountType": "user",
+    "budget": {...}
   }
 }
 ```
@@ -52,27 +101,28 @@ GET https://api-google-colab.onrender.com/api/v2/firebase/usuarios/BCc7NaZ4KQTqF
 
 ### 3️⃣ Obtener Gastos de un Usuario
 ```
-GET /api/v2/firebase/gastos/{usuario_id}
+GET /api/v2/firebase/users/{usuario_id}/gastos
 ```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos`
 
-**Ejemplo:**
-```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/BCc7NaZ4KQTqFY3dUxgStWH62dh2
-```
+**Query params opcionales:** `?ids_only=true`
 
 **Respuesta:**
 ```json
 {
   "status": "success",
   "usuario_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
-  "total_gastos": 5,
+  "total_gastos": 11,
+  "path_usado": "users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos",
   "data": [
     {
       "id": "5ZivLl6foLLSbfs5IU79",
       "cantidad": 18.67,
       "categoria": "Transporte",
       "descripcion": "taxi temprano",
-      "fecha": "2025-12-30"
+      "fecha": "2025-12-30T00:00:00.000",
+      "createdAt": "2025-12-30T20:27:14.844",
+      "userId": "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
     }
   ]
 }
@@ -80,39 +130,49 @@ GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/BCc7NaZ4KQTqFY3
 
 ---
 
-### 4️⃣ Obtener Gastos Procesados con IA
+### 4️⃣ Obtener Solo IDs de Gastos
 ```
-GET /api/v2/firebase/gastos-procesados/{usuario_id}
-Headers:
-  Authorization: Bearer {tu_token}
+GET /api/v2/firebase/users/{usuario_id}/gastos-ids
 ```
-
-**Ejemplo:**
-```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/BCc7NaZ4KQTqFY3dUxgStWH62dh2
-Headers:
-  Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
-```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos-ids`
 
 **Respuesta:**
 ```json
 {
   "status": "success",
   "usuario_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
-  "total_gastos": 5,
-  "gasto_total": 250.50,
-  "promedio_gasto": 50.10,
+  "total_gastos": 11,
+  "path_usado": "users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos",
+  "ids": [
+    "5ZivLl6foLLSbfs5IU79",
+    "7cGlk6Z1kDWVSmfwmNdi",
+    "HcW2VX9kb9dN22G704Ue"
+  ]
+}
+```
+
+---
+
+### 5️⃣ Obtener Gastos Procesados con IA (requiere token)
+```
+GET /api/v2/firebase/users/{usuario_id}/gastos-procesados
+Headers:
+  Authorization: Bearer {tu_token}
+```
+**Ejemplo:** `https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos-procesados`
+
+**Respuesta:**
+```json
+{
+  "status": "success",
+  "usuario_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2",
+  "total_gastos": 11,
+  "path_usado": "users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos",
+  "gasto_total": 302.92,
+  "promedio_gasto": 27.54,
   "resumen_por_categoria": {
-    "Transporte": {
-      "sum": 150,
-      "count": 3,
-      "mean": 50
-    },
-    "Comida": {
-      "sum": 100.50,
-      "count": 2,
-      "mean": 50.25
-    }
+    "Transporte": {"sum": 150.0, "count": 5, "mean": 30.0},
+    "Comida": {"sum": 100.50, "count": 4, "mean": 25.13}
   },
   "data": [...]
 }
@@ -120,9 +180,9 @@ Headers:
 
 ---
 
-### 5️⃣ Crear Nuevo Gasto
+### 6️⃣ Crear Nuevo Gasto (requiere token)
 ```
-POST /api/v2/firebase/crear-gasto/{usuario_id}
+POST /api/v2/firebase/users/{usuario_id}/gastos
 Headers:
   Authorization: Bearer {tu_token}
   Content-Type: application/json
@@ -132,13 +192,13 @@ Body:
   "cantidad": 75.50,
   "categoria": "Comida",
   "descripcion": "Cena en restaurante",
-  "fecha": "2024-12-30"
+  "fecha": "2026-01-02"
 }
 ```
 
 **Ejemplo completo:**
 ```
-POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/BCc7NaZ4KQTqFY3dUxgStWH62dh2
+POST https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos
 Headers:
   Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGc...
   Content-Type: application/json
@@ -147,8 +207,7 @@ Body:
 {
   "cantidad": 45,
   "categoria": "Transporte",
-  "descripcion": "Uber",
-  "fecha": "2024-12-30"
+  "descripcion": "Uber al trabajo"
 }
 ```
 
@@ -157,13 +216,14 @@ Body:
 {
   "status": "success",
   "mensaje": "Gasto creado correctamente",
-  "gasto_id": "nuevo_gasto_id_123",
+  "gasto_id": "nuevo_id_generado",
+  "path_usado": "users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos/nuevo_id_generado",
   "data": {
     "cantidad": 45,
     "categoria": "Transporte",
-    "descripcion": "Uber",
-    "fecha": "2024-12-30",
-    "createdAt": "2024-12-30T15:45:00"
+    "descripcion": "Uber al trabajo",
+    "fecha": "2026-01-02T...",
+    "createdAt": "2026-01-02T..."
   }
 }
 ```
@@ -172,118 +232,67 @@ Body:
 
 ## 🔄 Flujo Completo en Postman
 
-### Paso 1: Obtener Token
+### Paso 1: Verificar conexión Firebase
+```
+GET https://api-google-colab.onrender.com/api/v2/firebase/debug
+```
+
+### Paso 2: Obtener Token JWT
 ```
 POST https://api-google-colab.onrender.com/api/v2/auth/token
+Content-Type: application/json
+
 Body: {"user_id": "BCc7NaZ4KQTqFY3dUxgStWH62dh2"}
 ```
 
-### Paso 2: Obtener Gastos sin IA (sin token)
+### Paso 3: Obtener Gastos (sin token)
 ```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos/BCc7NaZ4KQTqFY3dUxgStWH62dh2
-```
-
-### Paso 3: Obtener Gastos con Análisis IA (requiere token)
-```
-GET https://api-google-colab.onrender.com/api/v2/firebase/gastos-procesados/BCc7NaZ4KQTqFY3dUxgStWH62dh2
-Headers:
-  Authorization: Bearer {token_del_paso_1}
+GET https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos
 ```
 
-### Paso 4: Crear un Nuevo Gasto
+### Paso 4: Obtener Gastos con Análisis IA (requiere token)
 ```
-POST https://api-google-colab.onrender.com/api/v2/firebase/crear-gasto/BCc7NaZ4KQTqFY3dUxgStWH62dh2
+GET https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos-procesados
 Headers:
-  Authorization: Bearer {token_del_paso_1}
+  Authorization: Bearer {token_del_paso_2}
+```
+
+### Paso 5: Crear un Nuevo Gasto
+```
+POST https://api-google-colab.onrender.com/api/v2/firebase/users/BCc7NaZ4KQTqFY3dUxgStWH62dh2/gastos
+Headers:
+  Authorization: Bearer {token_del_paso_2}
   Content-Type: application/json
+
 Body:
 {
   "cantidad": 50,
   "categoria": "Comida",
-  "descripcion": "Desayuno",
-  "fecha": "2024-12-31"
+  "descripcion": "Desayuno"
 }
 ```
 
 ---
 
-## 💡 Casos de Uso
+## 🔑 Resumen de Autenticación
 
-### Caso 1: Ver gastos del usuario actual
-```
-1. Obtén el token del usuario
-2. GET /api/v2/firebase/gastos-procesados/{usuario_id}
-3. Verás resumen automático por categoría
-```
-
-### Caso 2: Registrar nuevo gasto desde la app
-```
-1. Usuario ingresa gasto en Flutter
-2. POST /api/v2/firebase/crear-gasto/{usuario_id}
-3. Se guarda en Firebase y es accesible en la API
-```
-
-### Caso 3: Análisis histórico
-```
-1. GET /api/v2/firebase/gastos-procesados/{usuario_id}
-2. Luego POST /api/v2/predict-category con esos gastos
-3. Obtienes predicciones automáticas
-```
-
----
-
-## ✅ Estructura Firebase Actual
-
-Tu Firebase tiene esta estructura:
-
-```
-gestofin/
-  └── users/
-      ├── BCc7NaZ4KQTqFY3dUxgStWH62dh2/  (userId autogenerado)
-      │   ├── budget/
-      │   │   ├── ahorroRecomendado: 90
-      │   │   ├── gastosTotales: 302.92
-      │   │   ├── metaAhorro: 400
-      │   │   ├── presupuesoGeneral: 600
-      │   │   └── updatedAt: timestamp
-      │   └── gastos/ (Subcolección)
-      │       ├── 5ZivLl6foLLSbfs5IU79/
-      │       │   ├── cantidad: 18.67
-      │       │   ├── categoria: "Transporte"
-      │       │   ├── descripcion: "taxi temprano"
-      │       │   └── fecha: "2025-12-30"
-      │       └── {otro_gastoId}/
-      │           ├── cantidad: 50
-      │           ├── categoria: "Comida"
-      │           └── fecha: "2025-12-31"
-      ├── qn6FfGYZboNB48n26hjyYPEt8L43/
-      │   └── gastos/ (Subcolección)
-      └── sdyUylJAItaxjjVJEThKbhxeJFz2/
-          └── gastos/ (Subcolección)
-```
-
-**Campos importantes:**
-- Colección raíz: **`gestofin`**
-- Colección de usuarios: **`gestofin/users`**
-- IDs de usuarios: Auto-generados (hashes como BCc7NaZ4KQTqFY3dUxgStWH62dh2)
-- Campo de monto: **`cantidad`** (no `monto`)
-- Subcollección de gastos: **`gestofin/users/{userId}/gastos`**
-- IDs de gastos: Auto-generados (hashes como 5ZivLl6foLLSbfs5IU79)
+| Endpoint | Token JWT | Body JSON |
+|----------|-----------|-----------|
+| `/firebase/debug` | ❌ No | *(no aplica)* |
+| `/firebase/usuarios` | ❌ No | *(no aplica)* |
+| `/firebase/usuarios/{id}` | ❌ No | *(no aplica)* |
+| `/firebase/users/{id}/gastos` GET | ❌ No | *(no aplica)* |
+| `/firebase/users/{id}/gastos-ids` | ❌ No | *(no aplica)* |
+| `/firebase/users/{id}/gastos-procesados` | ✅ Sí | *(no aplica)* |
+| `/firebase/users/{id}/gastos` POST | ✅ Sí | `{"cantidad":..., "categoria":...}` |
 
 ---
 
 ## 🔐 Notas de Seguridad
 
-- ✅ Endpoints GET de Firebase NO requieren token
+- ✅ Base de datos: **gestofin** (no default)
+- ✅ Path de gastos: `users/{userId}/gastos`
+- ✅ Campo de monto: **`cantidad`** (no `monto`)
+- ✅ Endpoints GET de lectura NO requieren token
 - ✅ Endpoints POST/PUT/DELETE SÍ requieren token JWT
-- ✅ El archivo `gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json` está protegido
-- ✅ En Render, las credenciales se guardan como variables de entorno
-
----
-
-## 🚀 Próximos Pasos
-
-1. Sube los cambios a GitHub
-2. En Render, dispara un redeploy
-3. Prueba los endpoints en Postman
-4. La app Flutter ahora sincroniza con la API automáticamente
+- ✅ Las credenciales Firebase están en variables de entorno en Render
