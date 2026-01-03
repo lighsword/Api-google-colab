@@ -62,19 +62,25 @@ load_dotenv()
 FIREBASE_AVAILABLE = False
 db = None
 
+# ID de la base de datos Firestore - tu BD se llama "gestofin"
+FIRESTORE_DATABASE_ID = os.getenv('FIRESTORE_DATABASE_ID', 'gestofin')
+
 try:
     # Opción 1: Usar archivo JSON si existe localmente
     if os.path.exists('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json'):
         cred = credentials.Certificate('gestor-financiero-28ac2-firebase-adminsdk-fbsvc-6efa11cbf8.json')
-        # Inicializar con databaseURL para Realtime Database o sin él para Firestore
         firebase_admin.initialize_app(cred, {
             'databaseURL': 'https://gestor-financiero-28ac2.firebaseio.com',
             'projectId': 'gestor-financiero-28ac2'
         })
-        # Usar Firestore
-        db = firestore.client()
+        # Usar Firestore - intentar con database_id específico
+        try:
+            db = firestore.client(database=FIRESTORE_DATABASE_ID)
+        except TypeError:
+            # Versión antigua del SDK que no soporta database_id
+            db = firestore.client()
         FIREBASE_AVAILABLE = True
-        print("✅ Firebase conectado correctamente (desde archivo JSON)")
+        print(f"✅ Firebase conectado correctamente (desde archivo JSON) - Database: {FIRESTORE_DATABASE_ID}")
         try:
             import firebase_admin as _fb
             app_opts = _fb.get_app().options if _fb.get_app() else {}
@@ -100,9 +106,14 @@ try:
             'databaseURL': f"https://{os.getenv('FIREBASE_PROJECT_ID')}.firebaseio.com",
             'projectId': os.getenv('FIREBASE_PROJECT_ID')
         })
-        db = firestore.client()
+        # Usar Firestore - intentar con database_id específico
+        try:
+            db = firestore.client(database=FIRESTORE_DATABASE_ID)
+        except TypeError:
+            # Versión antigua del SDK que no soporta database_id
+            db = firestore.client()
         FIREBASE_AVAILABLE = True
-        print("✅ Firebase conectado correctamente (desde variables de entorno)")
+        print(f"✅ Firebase conectado correctamente (desde variables de entorno) - Database: {FIRESTORE_DATABASE_ID}")
         try:
             import firebase_admin as _fb
             app_opts = _fb.get_app().options if _fb.get_app() else {}
@@ -1820,6 +1831,7 @@ def firebase_debug():
     try:
         info = {
             'firebase_available': bool(FIREBASE_AVAILABLE),
+            'database_id': FIRESTORE_DATABASE_ID,
         }
         if not FIREBASE_AVAILABLE:
             return jsonify({'status': 'error', 'message': 'Firebase no disponible', 'data': info}), 503
