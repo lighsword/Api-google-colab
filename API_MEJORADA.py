@@ -73,14 +73,19 @@ try:
             'databaseURL': 'https://gestor-financiero-28ac2.firebaseio.com',
             'projectId': 'gestor-financiero-28ac2'
         })
-        # Usar Firestore - intentar con database_id específico
+        # Usar Firestore con database_id específico (nombre correcto del parámetro)
         try:
-            db = firestore.client(database=FIRESTORE_DATABASE_ID)
-        except TypeError:
-            # Versión antigua del SDK que no soporta database_id
-            db = firestore.client()
+            from google.cloud.firestore_v1 import Client as FirestoreClient
+            db = FirestoreClient(project='gestor-financiero-28ac2', database=FIRESTORE_DATABASE_ID, credentials=cred._credentials)
+            print(f"✅ Firebase conectado con database_id='{FIRESTORE_DATABASE_ID}' (Cliente directo)")
+        except Exception as e1:
+            try:
+                db = firestore.client(database_id=FIRESTORE_DATABASE_ID)
+                print(f"✅ Firebase conectado con database_id='{FIRESTORE_DATABASE_ID}'")
+            except TypeError:
+                db = firestore.client()
+                print(f"⚠️ SDK antiguo - usando database (default), no soporta database_id")
         FIREBASE_AVAILABLE = True
-        print(f"✅ Firebase conectado correctamente (desde archivo JSON) - Database: {FIRESTORE_DATABASE_ID}")
         try:
             import firebase_admin as _fb
             app_opts = _fb.get_app().options if _fb.get_app() else {}
@@ -106,14 +111,23 @@ try:
             'databaseURL': f"https://{os.getenv('FIREBASE_PROJECT_ID')}.firebaseio.com",
             'projectId': os.getenv('FIREBASE_PROJECT_ID')
         })
-        # Usar Firestore - intentar con database_id específico
+        # Usar Firestore con database_id específico (nombre correcto del parámetro)
         try:
-            db = firestore.client(database=FIRESTORE_DATABASE_ID)
-        except TypeError:
-            # Versión antigua del SDK que no soporta database_id
-            db = firestore.client()
+            from google.cloud.firestore_v1 import Client as FirestoreClient
+            from google.oauth2 import service_account
+            # Crear credenciales desde el config
+            gcloud_creds = service_account.Credentials.from_service_account_info(firebase_config)
+            db = FirestoreClient(project=os.getenv('FIREBASE_PROJECT_ID'), database=FIRESTORE_DATABASE_ID, credentials=gcloud_creds)
+            print(f"✅ Firebase conectado con database_id='{FIRESTORE_DATABASE_ID}' (Cliente directo)")
+        except Exception as e1:
+            print(f"⚠️ Error con cliente directo: {e1}")
+            try:
+                db = firestore.client(database_id=FIRESTORE_DATABASE_ID)
+                print(f"✅ Firebase conectado con database_id='{FIRESTORE_DATABASE_ID}'")
+            except TypeError:
+                db = firestore.client()
+                print(f"⚠️ SDK antiguo - usando database (default), no soporta database_id")
         FIREBASE_AVAILABLE = True
-        print(f"✅ Firebase conectado correctamente (desde variables de entorno) - Database: {FIRESTORE_DATABASE_ID}")
         try:
             import firebase_admin as _fb
             app_opts = _fb.get_app().options if _fb.get_app() else {}
