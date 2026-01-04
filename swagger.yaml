@@ -1,16 +1,3 @@
-# API Mejorada con 20+ Características de IA
-
-API Flask con machine learning para análisis de gastos, predicciones y recomendaciones de ahorro. Integrada con Firebase Firestore.
-
----
-
-## 📜 Swagger / OpenAPI
-
-Esta API está documentada con OpenAPI 3.0 (Swagger). Puedes:
-- Abrir el archivo [swagger.yaml](swagger.yaml) en Swagger Editor (https://editor.swagger.io).
-- Copiar el bloque YAML de abajo en tu herramienta favorita.
-
-```yaml
 openapi: 3.0.3
 info:
   title: Gestor Financiero IA API
@@ -18,6 +5,8 @@ info:
   description: |
     API Flask con análisis de gastos, predicciones y recomendaciones de ahorro, integrada con Firebase Firestore.
     Autenticación vía JWT. Muchas rutas aceptan GET con query params para conveniencia.
+  contact:
+    name: Equipo IA Finanzas
 servers:
   - url: http://localhost:5000
     description: Servidor local
@@ -39,6 +28,54 @@ components:
       schema:
         type: string
       description: ID del usuario en Firestore (colección users)
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        detalle:
+          type: string
+    StatusSuccess:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+    PredictionMonthly:
+      type: object
+      properties:
+        diarias:
+          type: array
+          items:
+            type: object
+            properties:
+              fecha:
+                type: string
+                format: date
+              prediccion:
+                type: number
+              min:
+                type: number
+              max:
+                type: number
+              semana:
+                type: integer
+              dia_semana:
+                type: string
+        total_mes:
+          type: number
+        promedio_diario:
+          type: number
+        resumen_semanal:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              total:
+                type: number
+              promedio_diario:
+                type: number
 paths:
   /api/v2/health:
     get:
@@ -46,6 +83,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /api/v2/auth/token:
     post:
       summary: Obtener token JWT
@@ -61,18 +102,52 @@ paths:
       responses:
         '200':
           description: Token generado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  token:
+                    type: string
+                  expires_in:
+                    type: integer
+        '500':
+          description: Error generando token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v2/auth/validate:
     post:
       summary: Validar token JWT
       responses:
         '200':
           description: Validación
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+  /api/v2/firebase/debug:
+    get:
+      summary: Diagnóstico Firestore
+      responses:
+        '200':
+          description: Datos de conexión
+        '503':
+          description: Firebase no disponible
   /api/v2/firebase/usuarios:
     get:
       summary: Listar usuarios (colección users)
       responses:
         '200':
           description: Usuarios listados
+        '503':
+          description: Firebase no disponible
   /api/v2/firebase/usuarios/{usuario_id}:
     get:
       summary: Obtener usuario con budget/current
@@ -81,6 +156,10 @@ paths:
       responses:
         '200':
           description: Usuario encontrado
+        '404':
+          description: Usuario no existe
+        '503':
+          description: Firebase no disponible
   /api/v2/firebase/users/{usuario_id}/gastos:
     get:
       summary: Listar gastos de un usuario
@@ -94,6 +173,8 @@ paths:
       responses:
         '200':
           description: Lista de gastos
+        '503':
+          description: Firebase no disponible
     post:
       summary: Crear gasto para un usuario
       security:
@@ -119,6 +200,10 @@ paths:
       responses:
         '201':
           description: Gasto creado
+        '400':
+          description: Datos inválidos
+        '503':
+          description: Firebase no disponible
   /api/v2/firebase/users/{usuario_id}/gastos-ids:
     get:
       summary: Listar solo IDs de gastos
@@ -127,6 +212,8 @@ paths:
       responses:
         '200':
           description: OK
+        '503':
+          description: Firebase no disponible
   /api/v2/firebase/users/{usuario_id}/gastos-procesados:
     get:
       summary: Gastos + resumen IA (por categoría)
@@ -137,6 +224,8 @@ paths:
       responses:
         '200':
           description: OK
+        '503':
+          description: Firebase no disponible
 
   # Predicción
   /api/v2/firebase/users/{usuario_id}/predict-category:
@@ -159,6 +248,10 @@ paths:
       responses:
         '200':
           description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionMonthly'
   /api/v2/firebase/users/{usuario_id}/detect-anomalies:
     get:
       summary: Detección de anomalías
@@ -439,239 +532,3 @@ paths:
       responses:
         '200':
           description: OK
-```
-
----
-
-## 🔥 Estructura Firebase (Firestore)
-
-```
-users/{userId}                       ← Documento del usuario
-  ├── gastos/{gastoId}              ← Subcolección de gastos
-  └── budget/current                ← Documento con presupuesto/ingresos actuales
-```
-
-Base de datos utilizada por la API: `users/{userId}/gastos` y `users/{userId}/budget/current`.
-
----
-
-## 🚀 Instalación local
-
-```bash
-# 1. Clonar repositorio
-git clone <tu-repo>
-cd "Api google colab"
-
-# 2. Crear entorno virtual
-python -m venv venv
-
-# 3. Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# 4. Instalar dependencias
-pip install -r requirements.txt
-
-# 5. Crear archivo .env
-cp .env.example .env
-
-# 6. Ejecutar la API
-python API_MEJORADA.py
-```
-
-La API estará disponible en `http://localhost:5000`
-
----
-
-## 🌐 Deploy en Render
-
-1. Pushea el código a GitHub
-2. Ve a [render.com](https://render.com)
-3. Conecta tu repositorio
-4. Crea un "Web Service":
-   - Build command: `pip install -r requirements.txt`
-   - Start command: `gunicorn API_MEJORADA:app`
-5. Configura variables de entorno en Render:
-   - `SECRET_KEY`: Tu clave secreta
-   - `FLASK_ENV`: `production`
-   - `PORT`: `5000`
-   - Variables Firebase (si usas credenciales por env)
-
----
-
-## 🔐 Autenticación
-
-- Obtener token: `POST /api/v2/auth/token`
-- Validar token: `POST /api/v2/auth/validate`
-- Usa el token en: `Authorization: Bearer <token>` o `X-API-Key: <token>`
-
-Ejemplo para obtener token:
-
-```bash
-curl -X POST http://localhost:5000/api/v2/auth/token \
-  -H "Content-Type: application/json" \
-  -d '{"user_id":"mi_usuario_123"}'
-```
-
----
-
-## 📚 Endpoints base: /api/v2/firebase/users
-
-Todos los endpoints de usuario están conectados a la ruta base `/api/v2/firebase/users/{usuario_id}` y trabajan directamente con Firestore en `users/{usuario_id}`.
-
-> Nota: Algunos endpoints requieren token JWT. Se indica en cada caso.
-
-### 1) Gastos
-
-- Listar gastos (sin token): `GET /api/v2/firebase/users/{usuario_id}/gastos`
-  - Query opcional: `?ids_only=true` para devolver solo IDs
-
-- Crear gasto (requiere token): `POST /api/v2/firebase/users/{usuario_id}/gastos`
-  - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
-  - Body JSON:
-    ```json
-    { "cantidad": 150.50, "categoria": "Alimentación", "descripcion": "Compras", "fecha": "2025-12-15" }
-    ```
-
-- Listar solo IDs (sin token): `GET /api/v2/firebase/users/{usuario_id}/gastos-ids`
-
-- Gastos procesados con IA (requiere token): `GET /api/v2/firebase/users/{usuario_id}/gastos-procesados`
-
-### 2) Asesor financiero (suite completa)
-
-- Asesor financiero completo (requiere token): `GET /api/v2/firebase/users/{usuario_id}/asesor-financiero`
-  - Incluye: predicciones 30 días, análisis estadístico, recomendaciones y datos de gráficos.
-
-### 3) Módulos por separado (todos requieren token)
-
-- Predicciones: `GET /api/v2/firebase/users/{usuario_id}/predicciones`
-- Análisis estadístico (con filtros): `GET /api/v2/firebase/users/{usuario_id}/analisis`
-  - Query opcional:
-    - `period=month&value=YYYY-MM`
-    - `period=year&value=YYYY`
-    - `period=quarter&value=YYYY-Qn`
-- Recomendaciones de ahorro: `GET /api/v2/firebase/users/{usuario_id}/recomendaciones`
-- Datos para gráficos: `GET /api/v2/firebase/users/{usuario_id}/graficos`
-- Score financiero: `GET /api/v2/firebase/users/{usuario_id}/score`
-
-### 4) Utilidades Firebase
-
-- Debug conexión Firestore: `GET /api/v2/firebase/debug`
-- Listar usuarios: `GET /api/v2/firebase/usuarios`
-- Obtener usuario por ID: `GET /api/v2/firebase/usuarios/{usuario_id}`
-
----
-
-## 📈 Endpoints de IA generales
-
-Para evitar errores 405 y ser explícitos por usuario, usa las rutas bajo `/api/v2/firebase/users/{usuario_id}` para TODOS los módulos de IA. Todas requieren token.
-
-### Predicción
-
-- `GET /api/v2/firebase/users/{usuario_id}/predict-category`
-- `GET /api/v2/firebase/users/{usuario_id}/predict-monthly`
-- `GET /api/v2/firebase/users/{usuario_id}/detect-anomalies`
-- `GET /api/v2/firebase/users/{usuario_id}/compare-models`
-- `GET /api/v2/firebase/users/{usuario_id}/seasonality`
-- `GET /api/v2/firebase/users/{usuario_id}/analysis-complete`
-
-### Análisis estadístico
-
-- `GET /api/v2/firebase/users/{usuario_id}/stat/correlations`
-- `GET /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison`
-- `GET /api/v2/firebase/users/{usuario_id}/stat/clustering?n_clusters=3`
-- `GET /api/v2/firebase/users/{usuario_id}/stat/trends`
-- `GET /api/v2/firebase/users/{usuario_id}/stat/outliers`
-- `GET /api/v2/firebase/users/{usuario_id}/stat/complete`
-
-### Ahorro y salud financiera
-
-- `GET /api/v2/firebase/users/{usuario_id}/savings/goals?goal_name=Viaje&target_amount=2500&months=6`
-- `GET /api/v2/firebase/users/{usuario_id}/savings/tips`
-- `GET /api/v2/firebase/users/{usuario_id}/savings/budget-alerts?monthly_budget=3000`
-- `GET /api/v2/firebase/users/{usuario_id}/savings/health-score?monthly_budget=3000`
-- `GET /api/v2/firebase/users/{usuario_id}/savings/weekly-report`
-- `GET /api/v2/firebase/users/{usuario_id}/savings/complete?goal_name=Viaje&target_amount=2500&months=6&monthly_budget=3000`
-
-### Gráficos
-
-- `GET /api/v2/firebase/users/{usuario_id}/charts/heatmap`
-- `GET /api/v2/firebase/users/{usuario_id}/charts/sankey`
-- `GET /api/v2/firebase/users/{usuario_id}/charts/dashboard`
-- `GET /api/v2/firebase/users/{usuario_id}/charts/comparison`
-- `GET /api/v2/firebase/users/{usuario_id}/charts/export?format=json`
-- `GET /api/v2/firebase/users/{usuario_id}/charts/complete`
-
----
-
-## 🛠️ Troubleshooting
-
-- Plotly missing: The charts endpoints return `{ "error": "Plotly no disponible. Instala: pip install plotly" }`. Install `plotly` to enable charts.
-- Kaleido missing: Image export falls back to JSON. Install `kaleido` to enable `format=base64` in `/charts/export`.
-- Firebase unavailable: Endpoints under `/firebase/*` return 503 if Firestore is not configured. Ensure env vars or service account JSON are set.
-- JSON serialization: Weekly summaries in predictions are JSON-safe (no tuple keys). If you see unexpected 500s, update to the latest version and reinstall deps.
-
-### Quick setup
-
-```bash
-pip install -r requirements.txt
-gunicorn API_MEJORADA:app --bind 0.0.0.0:5000
-```
-
-
-## 🔑 Resumen rápido de autenticación
-
-| Ruta | Requiere token |
-|------|-----------------|
-| `/api/v2/auth/token` | No |
-| `/api/v2/auth/validate` | Sí (en header) |
-| `/api/v2/health` | No |
-| `/api/v2/firebase/debug` | No |
-| `/api/v2/firebase/usuarios` | No |
-| `/api/v2/firebase/usuarios/{id}` | No |
-| `/api/v2/firebase/users/{id}/gastos` (GET) | No |
-| `/api/v2/firebase/users/{id}/gastos` (POST) | Sí |
-| `/api/v2/firebase/users/{id}/gastos-ids` | No |
-| `/api/v2/firebase/users/{id}/gastos-procesados` | Sí |
-| Resto de `/firebase/users/*` | Sí |
-| Todos `/predict-*`, `/stat/*`, `/savings/*`, `/charts/*` | Sí |
-
----
-
-## 📝 Ejemplo rápido (Python)
-
-```python
-import requests
-
-BASE_URL = 'http://localhost:5000'
-
-# 1) Token
-tok = requests.post(f'{BASE_URL}/api/v2/auth/token', json={'user_id': 'usuario1'}).json()['token']
-headers = {'Authorization': f'Bearer {tok}'}
-
-# 2) Crear gasto
-payload = { 'cantidad': 75.5, 'categoria': 'Restaurante', 'descripcion': 'Cena' }
-r1 = requests.post(f'{BASE_URL}/api/v2/firebase/users/usuario1/gastos', json=payload, headers=headers)
-
-# 3) Asesor financiero
-r2 = requests.get(f'{BASE_URL}/api/v2/firebase/users/usuario1/asesor-financiero', headers=headers)
-print(r1.json())
-print(r2.json())
-```
-
----
-
-## 📦 Dependencias
-
-- Flask: Framework web
-- pandas, numpy: Procesamiento de datos
-- scikit-learn: Machine learning
-- PyJWT: Autenticación JWT
-- firebase-admin: Integración con Firebase
-- gunicorn: Servidor WSGI para producción
-
-## 📄 Licencia
-
-MIT

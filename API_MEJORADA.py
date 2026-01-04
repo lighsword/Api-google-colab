@@ -50,6 +50,7 @@ import os
 from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore
+import base64
 
 warnings.filterwarnings('ignore')
 
@@ -416,12 +417,21 @@ def predict_monthly(df, days=30):
     weekly = df_pred.groupby('semana').agg({
         'prediccion': ['sum', 'mean']
     }).round(2)
+    # Aplanar columnas MultiIndex para que sea JSON-serializable
+    weekly.columns = ['total', 'promedio_diario']
+    weekly_summary = {
+        int(k): {
+            'total': float(v['total']),
+            'promedio_diario': float(v['promedio_diario'])
+        }
+        for k, v in weekly.to_dict(orient='index').items()
+    }
     
     return {
         'diarias': predictions,
         'total_mes': round(df_pred['prediccion'].sum(), 2),
         'promedio_diario': round(avg_daily, 2),
-        'resumen_semanal': weekly.to_dict()
+        'resumen_semanal': weekly_summary
     }
 
 
@@ -1773,10 +1783,10 @@ def export_graphics_as_image(df, output_format='json'):
     elif output_format == 'base64' and KALEIDO_AVAILABLE:
         try:
             graphics['graficos'] = [
-                {'nombre': 'Pie Categorías', 'base64': fig1.to_image(format='png')},
-                {'nombre': 'Series Temporal', 'base64': fig2.to_image(format='png')},
-                {'nombre': 'Barras Categorías', 'base64': fig3.to_image(format='png')},
-                {'nombre': 'Box Plot', 'base64': fig4.to_image(format='png')}
+                {'nombre': 'Pie Categorías', 'base64': base64.b64encode(fig1.to_image(format='png')).decode('ascii')},
+                {'nombre': 'Series Temporal', 'base64': base64.b64encode(fig2.to_image(format='png')).decode('ascii')},
+                {'nombre': 'Barras Categorías', 'base64': base64.b64encode(fig3.to_image(format='png')).decode('ascii')},
+                {'nombre': 'Box Plot', 'base64': base64.b64encode(fig4.to_image(format='png')).decode('ascii')}
             ]
         except:
             graphics['graficos'] = [
