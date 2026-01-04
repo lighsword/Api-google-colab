@@ -2874,6 +2874,26 @@ def obtener_gastos_firebase(usuario_id):
         return None, str(e)
 
 
+def obtener_budget_usuario(usuario_id):
+    """Lee la subcolección budget/current para traer presupuesto/ingresos mensuales del usuario."""
+    if not FIREBASE_AVAILABLE or not db:
+        return None, 'Firebase no disponible'
+    try:
+        doc = db.collection('users').document(usuario_id).collection('budget').document('current').get()
+        if not doc.exists:
+            return None, None
+        data = doc.to_dict() or {}
+        # Normalizar posibles nombres de campos
+        budget_info = {
+            'monthly_budget': data.get('monthly_budget') or data.get('budget') or data.get('monthlyBudget') or data.get('limit'),
+            'monthly_income': data.get('monthly_income') or data.get('income') or data.get('monthlyIncome'),
+            'currency': data.get('currency')
+        }
+        return budget_info, None
+    except Exception as e:
+        return None, str(e)
+
+
 def procesar_fecha(fecha_str):
     """Convierte diferentes formatos de fecha a datetime"""
     if fecha_str is None:
@@ -2950,7 +2970,8 @@ def asesor_financiero_completo(usuario_id):
         # ============================================
         # 3. RECOMENDACIONES DE AHORRO
         # ============================================
-        recomendaciones = generar_recomendaciones(df, analisis)
+        budget_info, _ = obtener_budget_usuario(usuario_id)
+        recomendaciones = generar_recomendaciones(df, analisis, budget_info=budget_info, predicciones=predicciones)
         
         # ============================================
         # 4. DATOS PARA GRÁFICOS
@@ -3192,7 +3213,7 @@ def generar_analisis_estadistico(df):
     return analisis
 
 
-def generar_recomendaciones(df, analisis):
+def generar_recomendaciones(df, analisis, budget_info=None, predicciones=None):
     """Genera recomendaciones personalizadas de ahorro"""
     recomendaciones = {
         'ahorro': [],
@@ -3237,27 +3258,57 @@ def generar_recomendaciones(df, analisis):
                     'prioridad': 'MEDIA'
                 })
         
-        # Metas sugeridas basadas en patrones
+        # Metas sugeridas dinámicas (evitar "números rojos")
         gasto_mensual_promedio = gasto_total / max(df['mes'].nunique(), 1)
-        
+        # Obtener predicción próxima (si no viene, calcular)
+        if not predicciones:
+            predicciones = generar_predicciones(df)
+        pred_next = predicciones.get('proximo_mes', {}).get('estimacion_ajustada') or predicciones.get('proximo_mes', {}).get('estimacion_base') or gasto_mensual_promedio
+        # Determinar presupuesto/ingresos
+        monthly_budget = None
+        monthly_income = None
+        if budget_info:
+            monthly_budget = budget_info.get('monthly_budget')
+            monthly_income = budget_info.get('monthly_income')
+        # Si no hay budget, usar gasto del mes anterior como referencia
+        comp = analisis.get('comparativas', {}).get('mes_actual_vs_anterior', {})
+        ref_prev_total = comp.get('mes_anterior', {}).get('total') if comp else None
+        ref_budget = monthly_budget if monthly_budget is not None else ref_prev_total
+        # Calcular ahorro necesario para balancear
+        base_capacidad = monthly_income if monthly_income is not None else ref_budget
+        savings_needed = None
+        if base_capacidad is not None:
+            savings_needed = max(0.0, float(pred_next) - float(base_capacidad))
+        else:
+            # Fallback: si no hay referencia, sugerir reducir el exceso vs promedio
+            savings_needed = max(0.0, float(pred_next) - float(gasto_mensual_promedio)) * 0.5
+        # Dificultad según proporción del ahorro necesario
+        ratio = (savings_needed / pred_next) if pred_next > 0 else 0
+        dificultad = 'FÁCIL' if ratio <= 0.1 else 'MEDIA' if ratio <= 0.25 else 'DIFÍCIL'
         recomendaciones['metas_sugeridas'] = [
             {
-                'tipo': 'AHORRO_MENSUAL',
-                'meta': round(gasto_mensual_promedio * 0.1, 2),
-                'descripcion': f'Ahorrar el 10% de tu gasto mensual (${gasto_mensual_promedio * 0.1:.2f})',
-                'dificultad': 'FÁCIL'
+                'tipo': 'EVITAR_NUMEROS_ROJOS',
+                'meta': round(savings_needed, 2),
+                'descripcion': 'Ahorro necesario para cerrar el mes sin déficit',
+                'base': {
+                    'prediccion_mes': round(pred_next, 2),
+                    'presupuesto': float(monthly_budget) if monthly_budget is not None else None,
+                    'ingreso': float(monthly_income) if monthly_income is not None else None,
+                    'referencia_mes_anterior': float(ref_prev_total) if ref_prev_total is not None else None
+                },
+                'dificultad': dificultad
             },
             {
-                'tipo': 'AHORRO_AGRESIVO',
-                'meta': round(gasto_mensual_promedio * 0.25, 2),
-                'descripcion': f'Meta agresiva: Ahorrar 25% mensual (${gasto_mensual_promedio * 0.25:.2f})',
-                'dificultad': 'DIFÍCIL'
+                'tipo': 'BUFFER_PREVENTIVO',
+                'meta': round(pred_next * 0.1, 2),
+                'descripcion': 'Crear un colchón del 10% de la proyección para imprevistos',
+                'dificultad': 'MEDIA'
             },
             {
                 'tipo': 'REDUCCION_CATEGORIA',
-                'categoria': gastos_categoria.index[0],
-                'meta': round(gastos_categoria.iloc[0] * 0.15, 2),
-                'descripcion': f'Reducir {gastos_categoria.index[0]} en 15%',
+                'categoria': gastos_categoria.index[0] if len(gastos_categoria) > 0 else 'N/A',
+                'meta': round((gastos_categoria.iloc[0] * 0.15) if len(gastos_categoria) > 0 else 0, 2),
+                'descripcion': f'Reducir {gastos_categoria.index[0]} en 15%' if len(gastos_categoria) > 0 else 'Reducir categoría principal en 15%',
                 'dificultad': 'MEDIA'
             }
         ]
@@ -3577,11 +3628,13 @@ def obtener_recomendaciones(usuario_id):
         df['dia_semana'] = df['fecha'].dt.dayofweek
         
         analisis = generar_analisis_estadistico(df)
+        predicciones = generar_predicciones(df)
+        budget_info, _ = obtener_budget_usuario(usuario_id)
         
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
-            'recomendaciones': generar_recomendaciones(df, analisis)
+            'recomendaciones': generar_recomendaciones(df, analisis, budget_info=budget_info, predicciones=predicciones)
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

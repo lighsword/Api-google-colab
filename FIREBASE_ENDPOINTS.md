@@ -411,8 +411,8 @@ Headers:
       }
     ],
     "metas_sugeridas": [
-      {"tipo": "AHORRO_MENSUAL", "meta": 30.29, "descripcion": "Ahorrar 10% mensual", "dificultad": "FÁCIL"},
-      {"tipo": "AHORRO_AGRESIVO", "meta": 75.73, "descripcion": "Ahorrar 25% mensual", "dificultad": "DIFÍCIL"}
+      {"tipo": "EVITAR_NUMEROS_ROJOS", "meta": 42.10, "descripcion": "Ahorro necesario para cerrar el mes sin déficit", "base": {"prediccion_mes": 341.55, "presupuesto": 300.00, "ingreso": null}, "dificultad": "MEDIA"},
+      {"tipo": "BUFFER_PREVENTIVO", "meta": 34.15, "descripcion": "Crear un colchón del 10% de la proyección para imprevistos", "dificultad": "MEDIA"}
     ],
     "tips_personalizados": [
       {"icono": "📅", "titulo": "Patrón: Viernes", "mensaje": "Los Viernes son tu día de mayor gasto"},
