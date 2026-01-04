@@ -2157,8 +2157,6 @@ def crear_gasto_firebase(usuario_id):
                     'hint': 'Use Content-Type: application/json o envíe form-data',
                     'example': {'cantidad': 10.5, 'categoria': 'comida', 'descripcion': 'opcional'}
                 }), 400
-        
-        # Validar datos requeridos
         cantidad_val = data.get('cantidad') or data.get('monto')
         categoria = data.get('categoria')
         if cantidad_val is None or not categoria:
@@ -3095,6 +3093,8 @@ def generar_analisis_estadistico(df):
     analisis = {
         'por_categoria': {},
         'por_mes': {},
+        'por_año': {},
+        'por_trimestre': {},
         'por_dia_semana': {},
         'comparativas': {},
         'outliers': [],
@@ -3128,6 +3128,28 @@ def generar_analisis_estadistico(df):
                 'promedio': round(df_mes['cantidad'].mean(), 2),
                 'cantidad_gastos': len(df_mes),
                 'categoria_top': df_mes.groupby('categoria')['cantidad'].sum().idxmax() if len(df_mes) > 0 else None
+            }
+
+        # Análisis por año
+        for year in df['año'].unique():
+            df_year = df[df['año'] == year]
+            analisis['por_año'][str(int(year))] = {
+                'total': round(df_year['cantidad'].sum(), 2),
+                'promedio': round(df_year['cantidad'].mean(), 2),
+                'cantidad_gastos': len(df_year),
+                'categoria_top': df_year.groupby('categoria')['cantidad'].sum().idxmax() if len(df_year) > 0 else None
+            }
+
+        # Análisis por trimestre
+        df['trimestre_num'] = df['fecha'].dt.quarter
+        df['trimestre_label'] = df['año'].astype(str) + '-Q' + df['trimestre_num'].astype(str)
+        for tlabel in df['trimestre_label'].unique():
+            df_tri = df[df['trimestre_label'] == tlabel]
+            analisis['por_trimestre'][tlabel] = {
+                'total': round(df_tri['cantidad'].sum(), 2),
+                'promedio': round(df_tri['cantidad'].mean(), 2),
+                'cantidad_gastos': len(df_tri),
+                'categoria_top': df_tri.groupby('categoria')['cantidad'].sum().idxmax() if len(df_tri) > 0 else None
             }
         
         # Análisis por día de semana
@@ -3595,11 +3617,52 @@ def obtener_analisis(usuario_id):
         df['mes'] = df['fecha'].dt.month
         df['año'] = df['fecha'].dt.year
         df['dia_semana'] = df['fecha'].dt.dayofweek
+
+        # Filtros de periodo opcionales via query params
+        period = request.args.get('period')
+        value = request.args.get('value')
+        filtro_aplicado = None
+
+        def _filtrar(df_in, p, v):
+            if not p or not v:
+                return df_in, None
+            p_norm = p.lower()
+            p_norm = {'mes': 'month', 'año': 'year', 'trimestre': 'quarter'}.get(p_norm, p_norm)
+            try:
+                if p_norm == 'month':
+                    # v: YYYY-MM
+                    df_in['period_m'] = df_in['fecha'].dt.to_period('M').astype(str)
+                    return df_in[df_in['period_m'] == v], {'period': p, 'value': v}
+                elif p_norm == 'year':
+                    yr = int(v)
+                    return df_in[df_in['fecha'].dt.year == yr], {'period': p, 'value': v}
+                elif p_norm == 'quarter':
+                    # v: YYYY-Qn or Qn-YYYY
+                    if '-' in v:
+                        parts = v.split('-')
+                        if parts[0].startswith('Q'):
+                            q = int(parts[0][1:])
+                            yr = int(parts[1])
+                        else:
+                            yr = int(parts[0])
+                            q = int(parts[1][1:]) if parts[1].startswith('Q') else int(parts[1])
+                    else:
+                        yr, qstr = v.split('Q') if 'Q' in v else (v, '1')
+                        yr = int(yr)
+                        q = int(qstr)
+                    mask = (df_in['fecha'].dt.year == yr) & (df_in['fecha'].dt.quarter == q)
+                    return df_in[mask], {'period': p, 'value': f'{yr}-Q{q}'}
+            except Exception:
+                return df_in, None
+            return df_in, None
+
+        df, filtro_aplicado = _filtrar(df, period, value)
         
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
-            'analisis': generar_analisis_estadistico(df)
+            'analisis': generar_analisis_estadistico(df),
+            'filtro': filtro_aplicado
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

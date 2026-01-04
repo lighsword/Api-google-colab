@@ -456,6 +456,17 @@ Headers: Authorization: Bearer {token}
 ```
 GET /api/v2/firebase/users/{usuario_id}/analisis
 Headers: Authorization: Bearer {token}
+Query params opcionales:
+  - period: mes | año | trimestre (también month|year|quarter)
+  - value:
+      - mes: YYYY-MM (ej: 2026-01)
+      - año: YYYY (ej: 2026)
+      - trimestre: YYYY-Qn (ej: 2026-Q1)
+
+Ejemplos:
+  GET /api/v2/firebase/users/{usuario_id}/analisis?period=mes&value=2026-01
+  GET /api/v2/firebase/users/{usuario_id}/analisis?period=año&value=2026
+  GET /api/v2/firebase/users/{usuario_id}/analisis?period=trimestre&value=2026-Q1
 ```
 
 ### 3️⃣ Solo Recomendaciones
