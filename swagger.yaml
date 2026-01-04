@@ -897,6 +897,62 @@ paths:
         '200':
           description: Todos los gráficos generados
 
+  /api/v2/firebase/usuarios:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener todos los usuarios
+      description: |
+        Obtiene todos los usuarios registrados en Firebase (colección users).
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/usuarios`
+        
+        **🔑 Requiere:** Token de autenticación
+      responses:
+        '200':
+          description: Usuarios obtenidos exitosamente
+          content:
+            application/json:
+              example:
+                status: "success"
+                total: 5
+                data:
+                  - id: "usuario123"
+                    nombre: "Juan Pérez"
+                    email: "juan@example.com"
+
+  /api/v2/firebase/usuarios/{usuario_id}:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener usuario específico
+      description: |
+        Obtiene información de un usuario específico desde Firebase.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/usuarios/{usuario_id}`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `usuario_id` (path): ID del usuario en Firebase
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario obtenido exitosamente
+          content:
+            application/json:
+              example:
+                status: "success"
+                data:
+                  id: "usuario123"
+                  nombre: "Juan Pérez"
+                  email: "juan@example.com"
+
   /api/v2/firebase/users/{usuario_id}/gastos:
     get:
       tags:

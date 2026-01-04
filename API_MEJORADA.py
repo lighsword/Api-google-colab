@@ -1974,6 +1974,7 @@ def firebase_debug():
 
 
 @app.route('/api/v2/firebase/usuarios', methods=['GET'])
+@token_required
 def get_usuarios_firebase():
     """Obtiene todos los usuarios registrados en Firebase (colección users)"""
     if not FIREBASE_AVAILABLE:
@@ -1999,6 +2000,7 @@ def get_usuarios_firebase():
 
 
 @app.route('/api/v2/firebase/usuarios/<usuario_id>', methods=['GET'])
+@token_required
 def get_usuario_firebase(usuario_id):
     """Obtiene un usuario específico por ID con su budget"""
     if not FIREBASE_AVAILABLE:

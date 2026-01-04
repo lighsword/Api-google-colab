@@ -648,7 +648,7 @@ X-API-Key: eyJ0eXAiOiJKV1QiLCJhbGc...
 
 **Endpoint:** `GET https://tu-api.com/api/v2/firebase/usuarios`
 
-**Requiere autenticación:** ❌ No
+**Requiere autenticación:** ✅ Sí
 
 **Descripción:** Obtiene todos los usuarios registrados en Firebase.
 
@@ -658,7 +658,7 @@ X-API-Key: eyJ0eXAiOiJKV1QiLCJhbGc...
 
 **Endpoint:** `GET https://tu-api.com/api/v2/firebase/usuarios/{usuario_id}`
 
-**Requiere autenticación:** ❌ No
+**Requiere autenticación:** ✅ Sí
 
 **Parámetros:**
 - `usuario_id` (path): ID del usuario en Firebase
