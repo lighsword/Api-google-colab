@@ -2,25 +2,14 @@
 
 API Flask con machine learning para análisis de gastos, predicciones y recomendaciones de ahorro. Integrada con Firebase Firestore.
 
----
-
-## 📜 Swagger / OpenAPI
-
-Esta API está documentada con OpenAPI 3.0 (Swagger) y organizada por módulos.
-
-- Ver documentación completa: abre [swagger.yaml](swagger.yaml) en Swagger Editor (https://editor.swagger.io).
-- Autenticación: muchas rutas requieren Bearer JWT. Primero consigue tu token.
-- Módulos: Auth, Health, Firebase, Predictions, Statistics, Savings, Charts.
+- Autenticación: muchas rutas requieren Bearer JWT. Primero consigue tu token en Auth.
+- Especificación completa: [swagger.yaml](swagger.yaml)
 
 ---
 
-## 📘 Endpoints + Swagger (claros y breves)
+## Auth
 
-A continuación, cada endpoint clave con su resumen y el fragmento Swagger que indica qué necesita y qué devuelve. La especificación completa está en [swagger.yaml](swagger.yaml).
-
-### Auth
-
-- Obtener token JWT: `POST /api/v2/auth/token`
+- Obtener token JWT: POST /api/v2/auth/token
 
 ```yaml
 post:
@@ -50,7 +39,7 @@ post:
             $ref: '#/components/schemas/ErrorResponse'
 ```
 
-- Validar token: `POST /api/v2/auth/validate`
+- Validar token: POST /api/v2/auth/validate
 
 ```yaml
 post:
@@ -65,9 +54,61 @@ post:
             $ref: '#/components/schemas/ValidateResponse'
 ```
 
-### Firebase
+---
 
-- Listar gastos: `GET /api/v2/firebase/users/{usuario_id}/gastos`
+## Health
+
+- Estado de la API: GET /api/v2/health
+
+```yaml
+get:
+  summary: Estado de la API
+  tags: [Health]
+  responses:
+    '200': { description: OK }
+```
+
+---
+
+## Firebase
+
+- Debug Firestore: GET /api/v2/firebase/debug
+
+```yaml
+get:
+  summary: Diagnóstico Firestore
+  tags: [Firebase]
+  responses:
+    '200': { description: Datos de conexión }
+    '503': { description: Firebase no disponible }
+```
+
+- Listar usuarios: GET /api/v2/firebase/usuarios
+
+```yaml
+get:
+  summary: Listar usuarios (colección users)
+  tags: [Firebase]
+  responses:
+    '200': { description: Usuarios listados }
+    '503': { description: Firebase no disponible }
+```
+
+- Obtener usuario: GET /api/v2/firebase/usuarios/{usuario_id}
+
+```yaml
+get:
+  summary: Obtener usuario con budget/current
+  tags: [Firebase]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: Usuario encontrado }
+    '404': { description: Usuario no existe }
+    '503': { description: Firebase no disponible }
+```
+
+- Listar gastos: GET /api/v2/firebase/users/{usuario_id}/gastos
 
 ```yaml
 get:
@@ -85,7 +126,7 @@ get:
     '503': { description: Firebase no disponible }
 ```
 
-- Crear gasto: `POST /api/v2/firebase/users/{usuario_id}/gastos` (requiere Bearer JWT)
+- Crear gasto: POST /api/v2/firebase/users/{usuario_id}/gastos (Bearer JWT)
 
 ```yaml
 post:
@@ -107,19 +148,140 @@ post:
             descripcion: { type: string }
             fecha: { type: string }
   responses:
-    '201':
-      description: Gasto creado
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/StatusSuccess'
+    '201': { description: Gasto creado }
     '400': { description: Datos inválidos }
     '503': { description: Firebase no disponible }
 ```
 
-### Predictions
+- Gastos procesados: GET /api/v2/firebase/users/{usuario_id}/gastos-procesados (Bearer JWT)
 
-- Predicción mensual: `GET /api/v2/firebase/users/{usuario_id}/predict-monthly` (Bearer JWT)
+```yaml
+get:
+  summary: Gastos + resumen IA (por categoría)
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+    '503': { description: Firebase no disponible }
+```
+
+- IDs de gastos: GET /api/v2/firebase/users/{usuario_id}/gastos-ids
+
+```yaml
+get:
+  summary: Listar solo IDs de gastos
+  tags: [Firebase]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+    '503': { description: Firebase no disponible }
+```
+
+- Asesor financiero: GET /api/v2/firebase/users/{usuario_id}/asesor-financiero (Bearer JWT)
+
+```yaml
+get:
+  summary: Asesor financiero IA completo
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Predicciones: GET /api/v2/firebase/users/{usuario_id}/predicciones (Bearer JWT)
+
+```yaml
+get:
+  summary: Solo predicciones de gastos
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Análisis: GET /api/v2/firebase/users/{usuario_id}/analisis (Bearer JWT)
+
+```yaml
+get:
+  summary: Solo análisis estadístico
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: period
+      schema: { type: string, enum: [month, year, quarter] }
+    - in: query
+      name: value
+      schema: { type: string }
+  responses:
+    '200': { description: OK }
+```
+
+- Recomendaciones: GET /api/v2/firebase/users/{usuario_id}/recomendaciones (Bearer JWT)
+
+```yaml
+get:
+  summary: Solo recomendaciones de ahorro
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Gráficos (datos): GET /api/v2/firebase/users/{usuario_id}/graficos (Bearer JWT)
+
+```yaml
+get:
+  summary: Solo datos para gráficos
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Score financiero: GET /api/v2/firebase/users/{usuario_id}/score (Bearer JWT)
+
+```yaml
+get:
+  summary: Score de salud financiera
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+---
+
+## Predictions (user-scoped)
+
+- Predicción por categoría: GET /api/v2/firebase/users/{usuario_id}/predict-category (Bearer JWT)
+
+```yaml
+get:
+  summary: Predicción por categoría (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Predicción mensual: GET /api/v2/firebase/users/{usuario_id}/predict-monthly (Bearer JWT)
 
 ```yaml
 get:
@@ -129,31 +291,49 @@ get:
   parameters:
     - $ref: '#/components/parameters/UsuarioId'
   responses:
-    '200':
-      description: OK
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/PredictionMonthly'
-      examples:
-        ejemplo:
-          value:
-            status: success
-            data:
-              diarias:
-                - fecha: 2026-01-04
-                  prediccion: 85.2
-                  min: 70.0
-                  max: 100.5
-                  semana: 1
-                  dia_semana: Monday
-              total_mes: 2450.8
-              promedio_diario: 81.7
-              resumen_semanal:
-                1: { total: 600.4, promedio_diario: 85.77 }
+    '200': { description: OK }
 ```
 
-- Análisis completo: `GET /api/v2/firebase/users/{usuario_id}/analysis-complete` (Bearer JWT)
+- Detección de anomalías: GET /api/v2/firebase/users/{usuario_id}/detect-anomalies (Bearer JWT)
+
+```yaml
+get:
+  summary: Detección de anomalías
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Comparar modelos: GET /api/v2/firebase/users/{usuario_id}/compare-models (Bearer JWT)
+
+```yaml
+get:
+  summary: Comparación de modelos ML
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Estacionalidad: GET /api/v2/firebase/users/{usuario_id}/seasonality (Bearer JWT)
+
+```yaml
+get:
+  summary: Análisis de estacionalidad
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Análisis completo: GET /api/v2/firebase/users/{usuario_id}/analysis-complete (Bearer JWT)
 
 ```yaml
 get:
@@ -166,9 +346,24 @@ get:
     '200': { description: OK }
 ```
 
-### Statistics
+---
 
-- Comparación temporal: `GET /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison` (Bearer JWT)
+## Statistics (user-scoped)
+
+- Correlaciones: GET /api/v2/firebase/users/{usuario_id}/stat/correlations (Bearer JWT)
+
+```yaml
+get:
+  summary: Correlaciones entre categorías
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Comparación temporal: GET /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison (Bearer JWT)
 
 ```yaml
 get:
@@ -181,7 +376,36 @@ get:
     '200': { description: OK }
 ```
 
-- Outliers: `GET /api/v2/firebase/users/{usuario_id}/stat/outliers` (Bearer JWT)
+- Clustering: GET /api/v2/firebase/users/{usuario_id}/stat/clustering?n_clusters=3 (Bearer JWT)
+
+```yaml
+get:
+  summary: Clustering de gastos
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: n_clusters
+      schema: { type: integer, default: 3 }
+  responses:
+    '200': { description: OK }
+```
+
+- Tendencias: GET /api/v2/firebase/users/{usuario_id}/stat/trends (Bearer JWT)
+
+```yaml
+get:
+  summary: Detección de tendencias
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Outliers: GET /api/v2/firebase/users/{usuario_id}/stat/outliers (Bearer JWT)
 
 ```yaml
 get:
@@ -194,9 +418,104 @@ get:
     '200': { description: OK }
 ```
 
-### Savings
+- Completo: GET /api/v2/firebase/users/{usuario_id}/stat/complete (Bearer JWT)
 
-- Ahorro completo: `GET /api/v2/firebase/users/{usuario_id}/savings/complete` (Bearer JWT)
+```yaml
+get:
+  summary: Estadístico completo
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+---
+
+## Savings (user-scoped)
+
+- Metas: GET /api/v2/firebase/users/{usuario_id}/savings/goals?goal_name=Viaje&target_amount=2500&months=6 (Bearer JWT)
+
+```yaml
+get:
+  summary: Metas de ahorro
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: goal_name
+      schema: { type: string }
+    - in: query
+      name: target_amount
+      schema: { type: number, default: 1000 }
+    - in: query
+      name: months
+      schema: { type: integer, default: 12 }
+  responses:
+    '200': { description: OK }
+```
+
+- Tips: GET /api/v2/firebase/users/{usuario_id}/savings/tips (Bearer JWT)
+
+```yaml
+get:
+  summary: Tips personalizados
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Alertas presupuesto: GET /api/v2/firebase/users/{usuario_id}/savings/budget-alerts?monthly_budget=3000 (Bearer JWT)
+
+```yaml
+get:
+  summary: Alertas de presupuesto
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: monthly_budget
+      schema: { type: number, default: 3000 }
+  responses:
+    '200': { description: OK }
+```
+
+- Health score: GET /api/v2/firebase/users/{usuario_id}/savings/health-score?monthly_budget=3000 (Bearer JWT)
+
+```yaml
+get:
+  summary: Puntuación financiera
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: monthly_budget
+      schema: { type: number, default: 3000 }
+  responses:
+    '200': { description: OK }
+```
+
+- Weekly report: GET /api/v2/firebase/users/{usuario_id}/savings/weekly-report (Bearer JWT)
+
+```yaml
+get:
+  summary: Reporte semanal
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Ahorro completo: GET /api/v2/firebase/users/{usuario_id}/savings/complete (Bearer JWT)
 
 ```yaml
 get:
@@ -221,9 +540,63 @@ get:
     '200': { description: OK }
 ```
 
-### Charts
+---
 
-- Exportar gráficos: `GET /api/v2/firebase/users/{usuario_id}/charts/export?format=json|base64` (Bearer JWT)
+## Charts (user-scoped)
+
+- Heatmap: GET /api/v2/firebase/users/{usuario_id}/charts/heatmap (Bearer JWT)
+
+```yaml
+get:
+  summary: Calendario de calor
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK (si Plotly disponible) }
+```
+
+- Sankey: GET /api/v2/firebase/users/{usuario_id}/charts/sankey (Bearer JWT)
+
+```yaml
+get:
+  summary: Diagrama Sankey
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Dashboard: GET /api/v2/firebase/users/{usuario_id}/charts/dashboard (Bearer JWT)
+
+```yaml
+get:
+  summary: Dashboard interactivo
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Comparativas: GET /api/v2/firebase/users/{usuario_id}/charts/comparison (Bearer JWT)
+
+```yaml
+get:
+  summary: Comparativas mes vs mes
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Exportar: GET /api/v2/firebase/users/{usuario_id}/charts/export?format=json|base64 (Bearer JWT)
 
 ```yaml
 get:
@@ -251,6 +624,259 @@ get:
             graficos:
               - nombre: Pie Categorías
                 base64: iVBORw0KGgoAAA...
+```
+
+- Todos los gráficos: GET /api/v2/firebase/users/{usuario_id}/charts/complete (Bearer JWT)
+
+```yaml
+get:
+  summary: Todos los gráficos
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+---
+
+## Endpoints generales (base /api/v2) con body o Firebase (Bearer JWT)
+
+- predict-category: GET/POST /api/v2/predict-category
+
+```yaml
+get:
+  summary: Predicción por categoría (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Predicción por categoría (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses:
+              type: array
+  responses:
+    '200': { description: OK }
+```
+
+- predict-monthly: GET/POST /api/v2/predict-monthly
+
+```yaml
+get:
+  summary: Predicción mensual (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Predicción mensual (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- detect-anomalies: GET/POST /api/v2/detect-anomalies
+
+```yaml
+get:
+  summary: Detección de anomalías
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Detección de anomalías
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- compare-models: GET/POST /api/v2/compare-models
+
+```yaml
+get:
+  summary: Comparación de modelos ML
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Comparación de modelos ML
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- seasonality: GET/POST /api/v2/seasonality
+
+```yaml
+get:
+  summary: Análisis de estacionalidad
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Análisis de estacionalidad
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- analysis-complete: GET/POST /api/v2/analysis-complete
+
+```yaml
+get:
+  summary: Análisis completo (predicciones)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Análisis completo (predicciones)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- stat/*: GET/POST /api/v2/stat/(correlations|temporal-comparison|clustering|trends|outliers|complete)
+
+```yaml
+get:
+  summary: Análisis estadístico
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Análisis estadístico
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- savings/*: GET/POST /api/v2/savings/(goals|tips|budget-alerts|health-score|weekly-report|complete)
+
+```yaml
+get:
+  summary: Recomendaciones de ahorro / salud financiera
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - in: query
+      name: monthly_budget
+      schema: { type: number, default: 3000 }
+  responses:
+    '200': { description: OK }
+post:
+  summary: Recomendaciones de ahorro / salud financiera
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+            monthly_budget: { type: number }
+  responses:
+    '200': { description: OK }
+```
+
+- charts/*: GET/POST /api/v2/charts/(heatmap|sankey|dashboard|comparison|export|complete)
+
+```yaml
+get:
+  summary: Gráficos y exportaciones
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - in: query
+      name: format
+      schema: { type: string, enum: [json, base64], default: json }
+  responses:
+    '200': { description: OK }
+post:
+  summary: Gráficos y exportaciones
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+            format: { type: string }
+  responses:
+    '200': { description: OK }
 ```
 
 ---
