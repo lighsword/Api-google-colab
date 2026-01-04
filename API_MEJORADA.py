@@ -33,7 +33,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory, Response
 from werkzeug.exceptions import BadRequest
 from firebase_admin import auth as firebase_auth
 from functools import wraps
@@ -148,6 +148,21 @@ TOKEN_EXPIRATION_HOURS = 24
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
+
+# Configuración de Swagger UI
+try:
+    from flask_swagger_ui import get_swaggerui_blueprint
+    SWAGGER_URL = '/docs'
+    API_URL = '/api/v2/swagger.yaml'
+    swaggerui_blueprint = get_swaggerui_blueprint(
+        SWAGGER_URL,
+        API_URL,
+        config={'app_name': "Gestor Financiero IA API"}
+    )
+    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+    print("✅ Swagger UI disponible en /docs")
+except ImportError:
+    print("⚠️  flask-swagger-ui no instalado - Swagger UI no disponible")
 
 # Diccionario para almacenar tokens activos
 active_tokens = {}
@@ -1875,6 +1890,19 @@ def validate_token_endpoint():
 # ============================================================
 # 📊 ENDPOINTS DE LA API
 # ============================================================
+
+@app.route('/api/v2/swagger.yaml', methods=['GET'])
+def swagger_spec():
+    """
+    Servir especificación OpenAPI.
+    """
+    import os
+    try:
+        swagger_path = os.path.join(os.path.dirname(__file__), 'swagger.yaml')
+        with open(swagger_path, 'r', encoding='utf-8') as f:
+            return Response(f.read(), mimetype='text/yaml')
+    except Exception as e:
+        return jsonify({'error': f'No se pudo cargar swagger.yaml: {str(e)}'}), 404
 
 @app.route('/api/v2/health', methods=['GET'])
 def health():

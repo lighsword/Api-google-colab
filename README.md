@@ -4,6 +4,16 @@ API Flask con machine learning para análisis de gastos, predicciones y recomend
 
 - Autenticación: muchas rutas requieren Bearer JWT. Primero consigue tu token en Auth.
 - Especificación completa: [swagger.yaml](swagger.yaml)
+- **Documentación interactiva**: Accede a `/docs` para explorar la API con Swagger UI
+
+## Inicio rápido
+
+```powershell
+pip install -r requirements.txt
+python API_MEJORADA.py
+```
+
+Luego abre http://localhost:5000/docs para ver la documentación interactiva.
 
 ---
 
