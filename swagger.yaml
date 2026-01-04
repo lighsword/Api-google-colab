@@ -1,1253 +1,1100 @@
-openapi: 3.0.3
+openapi: 3.0.0
 info:
   title: Gestor Financiero IA API
-  version: "2.0"
+  version: 2.0.0
   description: |
-    API Flask con análisis de gastos, predicciones y recomendaciones de ahorro, integrada con Firebase Firestore.
-    Autenticación vía JWT. Muchas rutas aceptan GET con query params para conveniencia.
+    API avanzada con 20 características de Inteligencia Artificial para gestión financiera personal.
+    
+    ## 🚀 Características Principales
+    
+    ### 📊 PREDICCIÓN DE GASTOS (5 mejoras)
+    1. Predicción por categoría
+    2. Predicción mensual (30 días)
+    3. Detección de anomalías
+    4. Múltiples modelos ML (ARIMA, Prophet, LSTM)
+    5. Análisis de estacionalidad
+    
+    ### 📈 ANÁLISIS ESTADÍSTICO (5 mejoras)
+    6. Correlaciones entre categorías
+    7. Análisis temporal (mes actual vs anterior)
+    8. Clustering automático de gastos
+    9. Detección de tendencias
+    10. Identificación de outliers (IQR + Z-Score)
+    
+    ### 💡 RECOMENDACIONES DE AHORRO (5 mejoras)
+    11. Metas de ahorro (objetivos específicos)
+    12. Tips personalizados (basados en patrones)
+    13. Alertas de presupuesto (límites mensuales)
+    14. Gamificación (puntuación financiera)
+    15. Reportes automáticos (resumen semanal)
+    
+    ### 📊 GRÁFICOS Y VISUALIZACIÓN (5 mejoras)
+    16. Calendario de calor (Heatmap de gastos)
+    17. Gráfico Sankey (Flujo de dinero)
+    18. Dashboard interactivo (Panel con filtros)
+    19. Comparativas (Mes vs mes anterior)
+    20. Exportar como imagen (PNG/PDF)
+    
+    ## 🔐 Autenticación
+    
+    Todos los endpoints (excepto `/auth/token` y `/health`) requieren autenticación mediante JWT.
+    
+    **Paso 1:** Obtener token en `/api/v2/auth/token`
+    
+    **Paso 2:** Incluir token en headers:
+    - `Authorization: Bearer {token}` o
+    - `X-API-Key: {token}`
+
 servers:
+  - url: https://tu-api.onrender.com
+    description: Servidor de producción
   - url: http://localhost:5000
-    description: Servidor local
-  - url: https://your-render-service.onrender.com
-    description: Producción (Render)
-security:
-  - bearerAuth: []
-tags:
-  - name: Auth
-    description: Autenticación y validación de token JWT
-  - name: Health
-    description: Estado de la API
-  - name: Firebase
-    description: Lectura/escritura de datos en Firestore
-  - name: Predictions
-    description: Predicciones y análisis de gasto futuro
-  - name: Statistics
-    description: Análisis estadístico y detecciones
-  - name: Savings
-    description: Metas de ahorro, tips y salud financiera
-  - name: Charts
-    description: Gráficos y exportaciones
+    description: Servidor de desarrollo local
+
 components:
   securitySchemes:
-    bearerAuth:
+    BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  parameters:
-    UsuarioId:
-      in: path
-      name: usuario_id
-      required: true
-      schema:
-        type: string
-      description: ID del usuario en Firestore (colección users)
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  
+  schemas:
+    Expense:
+      type: object
+      required:
+        - fecha
+        - monto
+        - categoria
+      properties:
+        fecha:
+          type: string
+          format: date
+          example: "2024-12-15"
+        monto:
+          type: number
+          format: float
+          example: 150.50
+        categoria:
+          type: string
+          example: "Comida"
+    
+    ExpensesRequest:
+      type: object
+      properties:
+        expenses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Expense'
+          description: "Lista de gastos (opcional si se usa Firebase)"
+    
+    TokenRequest:
+      type: object
+      properties:
+        user_id:
+          type: string
+          example: "usuario123"
+          default: "default_user"
+    
+    TokenResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        token:
+          type: string
+          example: "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        expires_in:
+          type: integer
+          example: 86400
+        message:
+          type: string
+        instrucciones:
+          type: string
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Token inválido o expirado"
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
 paths:
-  /api/v2/health:
-    get:
-      summary: Estado de la API
-      tags: [Health]
-      responses:
-        '200':
-          description: OK
   /api/v2/auth/token:
     post:
-      summary: Obtener token JWT
-      tags: [Auth]
+      tags:
+        - Autenticación
+      summary: Generar token JWT
+      description: Genera un nuevo token JWT para acceder a los endpoints protegidos
+      security: []
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                user_id:
-                  type: string
+              $ref: '#/components/schemas/TokenRequest'
       responses:
         '200':
-          description: Token generado
+          description: Token generado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+              example:
+                status: "success"
+                token: "eyJ0eXAiOiJKV1QiLCJhbGc..."
+                expires_in: 86400
+                message: "Token generado para usuario123. Válido por 24 horas"
+                instrucciones: "Usar en headers: Authorization: Bearer <token> o X-API-Key: <token>"
+
   /api/v2/auth/validate:
     post:
-      summary: Validar token JWT
-      tags: [Auth]
+      tags:
+        - Autenticación
+      summary: Validar token
+      description: Verifica si un token JWT es válido
+      security: []
       responses:
         '200':
-          description: Validación
-  /api/v2/firebase/usuarios:
-    get:
-      summary: Listar usuarios (colección users)
-      tags: [Firebase]
-      responses:
-        '200':
-          description: Usuarios listados
-  /api/v2/firebase/usuarios/{usuario_id}:
-    get:
-      summary: Obtener usuario con budget/current
-      tags: [Firebase]
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: Usuario encontrado
-  /api/v2/firebase/users/{usuario_id}/gastos:
-    get:
-      summary: Listar gastos de un usuario
-      tags: [Firebase]
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: ids_only
-          schema:
-            type: string
-            enum: [true, false]
-      responses:
-        '200':
-          description: Lista de gastos
-    post:
-      summary: Crear gasto para un usuario
-      tags: [Firebase]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [cantidad, categoria]
-              properties:
-                cantidad:
-                  type: number
-                categoria:
-                  type: string
-                descripcion:
-                  type: string
-                fecha:
-                  type: string
-      responses:
-        '201':
-          description: Gasto creado
-  /api/v2/firebase/users/{usuario_id}/gastos-ids:
-    get:
-      summary: Listar solo IDs de gastos
-      tags: [Firebase]
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/gastos-procesados:
-    get:
-      summary: Gastos + resumen IA (por categoría)
-      tags: [Firebase]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
+          description: Resultado de validación
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+              example:
+                valid: true
+                message: "Token válido"
 
-  # Predicción
-  /api/v2/firebase/users/{usuario_id}/predict-category:
+  /api/v2/health:
     get:
-      summary: Predicción por categoría (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
+      tags:
+        - Utilidades
+      summary: Estado de la API
+      description: Verifica el estado de la API y sus servicios
+      security: []
       responses:
         '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/predict-monthly:
-    get:
-      summary: Predicción mensual (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-          examples:
-            ejemplo:
-              value:
-                status: success
-                data:
-                  diarias:
-                    - fecha: 2026-01-04
-                      prediccion: 85.2
-                      min: 70.0
-                      max: 100.5
-                      semana: 1
-                      dia_semana: Monday
-                  total_mes: 2450.8
-                  promedio_diario: 81.7
-                  resumen_semanal:
-                    1: { total: 600.4, promedio_diario: 85.77 }
-  /api/v2/firebase/users/{usuario_id}/detect-anomalies:
-    get:
-      summary: Detección de anomalías
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/compare-models:
-    get:
-      summary: Comparación de modelos ML
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/seasonality:
-    get:
-      summary: Análisis de estacionalidad
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/analysis-complete:
-    get:
-      summary: Análisis completo (predicciones)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
+          description: Estado de la API
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                  firebase:
+                    type: boolean
+                  modelos_disponibles:
+                    type: object
+              example:
+                status: "ok"
+                timestamp: "2024-12-15T10:30:00"
+                firebase: true
+                modelos_disponibles:
+                  arima: true
+                  prophet: true
+                  lstm: false
 
-  # Estadística
-  /api/v2/firebase/users/{usuario_id}/stat/correlations:
-    get:
-      summary: Correlaciones entre categorías
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison:
-    get:
-      summary: Mes actual vs anterior
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/stat/clustering:
-    get:
-      summary: Clustering de gastos
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: n_clusters
-          schema:
-            type: integer
-            default: 3
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/stat/trends:
-    get:
-      summary: Detección de tendencias
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/stat/outliers:
-    get:
-      summary: Outliers (IQR + Z-Score)
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/stat/complete:
-    get:
-      summary: Estadístico completo
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-
-  # Ahorro y salud financiera
-  /api/v2/firebase/users/{usuario_id}/savings/goals:
-    get:
-      summary: Metas de ahorro
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: goal_name
-          schema:
-            type: string
-        - in: query
-          name: target_amount
-          schema:
-            type: number
-            default: 1000
-        - in: query
-          name: months
-          schema:
-            type: integer
-            default: 12
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/savings/tips:
-    get:
-      summary: Tips personalizados
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/savings/budget-alerts:
-    get:
-      summary: Alertas de presupuesto
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/savings/health-score:
-    get:
-      summary: Puntuación financiera
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/savings/weekly-report:
-    get:
-      summary: Reporte semanal
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/savings/complete:
-    get:
-      summary: Ahorro completo (todos módulos)
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: goal_name
-          schema:
-            type: string
-        - in: query
-          name: target_amount
-          schema:
-            type: number
-            default: 5000
-        - in: query
-          name: months
-          schema:
-            type: integer
-            default: 12
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
-
-  # Gráficos
-  /api/v2/firebase/users/{usuario_id}/charts/heatmap:
-    get:
-      summary: Calendario de calor
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK (si Plotly disponible)
-  /api/v2/firebase/users/{usuario_id}/charts/sankey:
-    get:
-      summary: Diagrama Sankey
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/charts/dashboard:
-    get:
-      summary: Dashboard interactivo
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/charts/comparison:
-    get:
-      summary: Comparativas mes vs mes
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-  /api/v2/firebase/users/{usuario_id}/charts/export:
-    get:
-      summary: Exportar gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-        - in: query
-          name: format
-          schema:
-            type: string
-            enum: [json, base64]
-            default: json
-      responses:
-        '200':
-          description: OK
-          examples:
-            json:
-              value:
-                formato: json
-                graficos:
-                  - nombre: Pie Categorías
-                    json: '{...}'
-            base64:
-              value:
-                formato: base64
-                graficos:
-                  - nombre: Pie Categorías
-                    base64: iVBORw0KGgoAAA...
-  /api/v2/firebase/users/{usuario_id}/charts/complete:
-    get:
-      summary: Todos los gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UsuarioId'
-      responses:
-        '200':
-          description: OK
-
-  # ============================================================
-  # Endpoints generales (base /api/v2) con body o Firebase
-  # ============================================================
-
-  # --- Predicciones ---
   /api/v2/predict-category:
-    get:
-      summary: Predicción por categoría (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Predicción por categoría (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Predicción por categoría
+      description: |
+        Predice gastos separados para cada categoría para los próximos 30 días.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/predict-category`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** 
+        - `expenses` (opcional): Array de gastos. Si se omite, se obtienen de Firebase usando el user_id del token.
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Predicciones generadas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  data:
+                    type: object
+              example:
+                status: "success"
+                data:
+                  Comida:
+                    predicciones:
+                      - fecha: "2024-12-16"
+                        monto: 85.50
+                      - fecha: "2024-12-17"
+                        monto: 92.30
+                    total: 2556.00
+                    promedio_diario: 85.20
+                  Transporte:
+                    predicciones:
+                      - fecha: "2024-12-16"
+                        monto: 35.00
+                    total: 1050.00
+                    promedio_diario: 35.00
 
   /api/v2/predict-monthly:
-    get:
-      summary: Predicción mensual (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Predicción de Gastos
       summary: Predicción mensual (30 días)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      description: |
+        Predice gastos para los próximos 30 días con intervalos de confianza.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/predict-monthly`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Predicción mensual generada
+          content:
+            application/json:
+              example:
+                status: "success"
+                data:
+                  diarias:
+                    - fecha: "2024-12-16"
+                      dia_semana: "Monday"
+                      semana: 1
+                      prediccion: 120.50
+                      min: 80.30
+                      max: 160.70
+                  total_mes: 3615.00
+                  promedio_diario: 120.50
+                  resumen_semanal:
+                    1:
+                      total: 843.50
+                      promedio_diario: 120.50
 
   /api/v2/detect-anomalies:
-    get:
-      summary: Detección de anomalías
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Predicción de Gastos
       summary: Detección de anomalías
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      description: |
+        Detecta gastos anómalos usando Z-Score e Isolation Forest.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/detect-anomalies`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Anomalías detectadas
+          content:
+            application/json:
+              example:
+                status: "success"
+                data:
+                  cantidad: 3
+                  anomalias:
+                    - fecha: "2024-12-10"
+                      monto: 850.00
+                      categoria: "Compras"
+                      metodo: "Z-Score"
+                      razon: "Desviación 3.45σ del promedio"
+                  porcentaje: 5.26
 
   /api/v2/compare-models:
-    get:
-      summary: Comparación de modelos ML
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Predicción de Gastos
       summary: Comparación de modelos ML
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      description: |
+        Entrena y compara múltiples modelos de Machine Learning (RandomForest, ARIMA, ExponentialSmoothing).
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/compare-models`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Comparación de modelos completada
+          content:
+            application/json:
+              example:
+                status: "success"
+                data:
+                  modelos: ["RandomForest", "ARIMA", "ExponentialSmoothing"]
+                  resultados:
+                    RandomForest:
+                      mae: 15.32
+                      r2: 0.8756
+                      modelo: "RandomForest"
+                    ARIMA:
+                      mae: 18.45
+                      r2: 0.8234
+                      modelo: "ARIMA"
+                  mejor: "RandomForest"
+                  mejor_r2: 0.8756
 
   /api/v2/seasonality:
-    get:
-      summary: Análisis de estacionalidad
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Predicción de Gastos
       summary: Análisis de estacionalidad
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      description: |
+        Detecta patrones semanales y mensuales en los gastos.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/seasonality`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Análisis de estacionalidad completado
 
   /api/v2/analysis-complete:
-    get:
-      summary: Análisis completo (predicciones)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Análisis completo (predicciones)
-      tags: [Predictions]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Análisis completo de predicción
+      description: |
+        Ejecuta todas las 5 mejoras de predicción en un solo endpoint.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/analysis-complete`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Análisis completo generado
+          content:
+            application/json:
+              example:
+                status: "success"
+                data:
+                  prediccion_categoria: {}
+                  prediccion_mensual: {}
+                  anomalias: {}
+                  comparacion_modelos: {}
+                  estacionalidad: {}
+                  timestamp: "2024-12-15T10:30:00"
 
-  # --- Estadística ---
   /api/v2/stat/correlations:
-    get:
-      summary: Correlaciones entre categorías
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📈 Análisis Estadístico
       summary: Correlaciones entre categorías
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      description: |
+        Analiza correlaciones entre diferentes categorías de gastos.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/correlations`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Correlaciones calculadas
 
   /api/v2/stat/temporal-comparison:
-    get:
-      summary: Mes actual vs anterior
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Mes actual vs anterior
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Comparación temporal
+      description: |
+        Compara gastos del mes actual vs mes anterior.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/temporal-comparison`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Comparación temporal generada
 
   /api/v2/stat/clustering:
-    get:
-      summary: Clustering de gastos
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: n_clusters
-          schema:
-            type: integer
-            default: 3
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📈 Análisis Estadístico
       summary: Clustering de gastos
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      description: |
+        Agrupa automáticamente gastos similares usando K-Means.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/clustering`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `n_clusters` (opcional): Número de clusters (default: 3)
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 n_clusters:
                   type: integer
-                  default: 3
+                  example: 3
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Clustering completado
 
   /api/v2/stat/trends:
-    get:
-      summary: Detección de tendencias
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📈 Análisis Estadístico
       summary: Detección de tendencias
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      description: |
+        Detecta tendencias en los patrones de gasto.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/trends`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Tendencias detectadas
 
   /api/v2/stat/outliers:
-    get:
-      summary: Outliers (IQR + Z-Score)
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Outliers (IQR + Z-Score)
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Detección de outliers
+      description: |
+        Detecta gastos atípicos usando IQR y Z-Score.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/outliers`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Outliers detectados
 
   /api/v2/stat/complete:
-    get:
-      summary: Estadístico completo
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Estadístico completo
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Análisis estadístico completo
+      description: |
+        Ejecuta todas las 5 mejoras de análisis estadístico en un solo endpoint.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/stat/complete`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Análisis completo generado
 
-  # --- Ahorro ---
   /api/v2/savings/goals:
-    get:
-      summary: Metas de ahorro
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: goal_name
-          schema:
-            type: string
-        - in: query
-          name: target_amount
-          schema:
-            type: number
-            default: 1000
-        - in: query
-          name: months
-          schema:
-            type: integer
-            default: 12
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
       summary: Metas de ahorro
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      description: |
+        Calcula metas de ahorro personalizadas basadas en objetivos específicos.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/goals`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `goal_name`: Nombre de la meta (default: "Meta general")
+        - `target_amount`: Monto objetivo (default: 5000)
+        - `months`: Meses para alcanzar la meta (default: 12)
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 goal_name:
                   type: string
+                  example: "Vacaciones"
                 target_amount:
                   type: number
-                  default: 1000
+                  example: 5000
                 months:
                   type: integer
-                  default: 12
+                  example: 12
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Metas calculadas
 
   /api/v2/savings/tips:
-    get:
-      summary: Tips personalizados
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
       summary: Tips personalizados
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera tips de ahorro personalizados basados en patrones de gasto.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/tips`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Tips generados
 
   /api/v2/savings/budget-alerts:
-    get:
-      summary: Alertas de presupuesto
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
       summary: Alertas de presupuesto
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera alertas cuando se acerca o supera el presupuesto mensual.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/budget-alerts`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `monthly_budget`: Presupuesto mensual (default: 3000)
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 monthly_budget:
                   type: number
-                  default: 3000
+                  example: 3000
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Alertas generadas
 
   /api/v2/savings/health-score:
-    get:
-      summary: Puntuación financiera
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
       summary: Puntuación financiera
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      description: |
+        Calcula una puntuación de salud financiera (0-100).
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/health-score`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `monthly_budget`: Presupuesto mensual (default: 3000)
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 monthly_budget:
                   type: number
-                  default: 3000
+                  example: 3000
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Puntuación calculada
 
   /api/v2/savings/weekly-report:
-    get:
-      summary: Reporte semanal
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
       summary: Reporte semanal
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera un resumen automático de gastos de la última semana.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/weekly-report`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Reporte generado
 
   /api/v2/savings/complete:
-    get:
-      summary: Ahorro completo (todos módulos)
-      tags: [Savings]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: goal_name
-          schema:
-            type: string
-        - in: query
-          name: target_amount
-          schema:
-            type: number
-            default: 5000
-        - in: query
-          name: months
-          schema:
-            type: integer
-            default: 12
-        - in: query
-          name: monthly_budget
-          schema:
-            type: number
-            default: 3000
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Ahorro completo (todos módulos)
-      tags: [Savings]
-      security:
-        - bearerAuth: []
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Análisis completo de ahorro
+      description: |
+        Ejecuta todas las 5 mejoras de recomendaciones de ahorro en un solo endpoint.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/savings/complete`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `goal_name`, `target_amount`, `months`, `monthly_budget`
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 goal_name:
                   type: string
                 target_amount:
                   type: number
-                  default: 5000
                 months:
                   type: integer
-                  default: 12
                 monthly_budget:
                   type: number
-                  default: 3000
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Análisis completo generado
 
-  # --- Gráficos ---
   /api/v2/charts/heatmap:
-    get:
-      summary: Calendario de calor
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Gráficos y Visualización
       summary: Calendario de calor
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera un calendario de calor (heatmap) de gastos.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/heatmap`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Heatmap generado
 
   /api/v2/charts/sankey:
-    get:
-      summary: Diagrama Sankey
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Gráficos y Visualización
       summary: Diagrama Sankey
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera un diagrama Sankey del flujo de dinero entre categorías.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/sankey`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Diagrama Sankey generado
 
   /api/v2/charts/dashboard:
-    get:
-      summary: Dashboard interactivo
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Gráficos y Visualización
       summary: Dashboard interactivo
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera un dashboard interactivo con múltiples gráficos.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/dashboard`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Dashboard generado
 
   /api/v2/charts/comparison:
-    get:
-      summary: Comparativas mes vs mes
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: OK
     post:
-      summary: Comparativas mes vs mes
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Comparación mensual
+      description: |
+        Genera gráficos comparativos mes vs mes anterior.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/comparison`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
       requestBody:
-        required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                expenses:
-                  type: array
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Comparación generada
 
   /api/v2/charts/export:
-    get:
-      summary: Exportar gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: format
-          schema:
-            type: string
-            enum: [json, base64]
-            default: json
-      responses:
-        '200':
-          description: OK
     post:
+      tags:
+        - 📊 Gráficos y Visualización
       summary: Exportar gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      description: |
+        Exporta gráficos como imágenes en formato JSON o BASE64.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/export`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `format`: "json" o "base64" (default: "json")
+        - `expenses` (opcional): Array de gastos
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                expenses:
-                  type: array
                 format:
                   type: string
-                  enum: [json, base64]
-                  default: json
+                  enum: ["json", "base64"]
+                  example: "json"
+                expenses:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Expense'
       responses:
         '200':
-          description: OK
+          description: Gráficos exportados
 
   /api/v2/charts/complete:
-    get:
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
       summary: Todos los gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      description: |
+        Genera todos los 5 tipos de gráficos en un solo endpoint.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/charts/complete`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** Ninguno (usa datos de Firebase) o `expenses` array
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpensesRequest'
       responses:
         '200':
-          description: OK
+          description: Todos los gráficos generados
+
+  /api/v2/firebase/users/{usuario_id}/gastos:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener gastos del usuario
+      description: |
+        Obtiene todos los gastos registrados de un usuario desde Firebase.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/gastos`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:** 
+        - `usuario_id` (path): ID del usuario en Firebase
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gastos obtenidos exitosamente
+    
     post:
-      summary: Todos los gráficos
-      tags: [Charts]
-      security:
-        - bearerAuth: []
+      tags:
+        - 🔥 Firebase Integration
+      summary: Crear nuevo gasto
+      description: |
+        Crea un nuevo gasto en Firebase para el usuario especificado.
+        
+        **🔗 Endpoint:** `POST https://tu-api.com/api/v2/firebase/users/{usuario_id}/gastos`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `usuario_id` (path): ID del usuario
+        - Body: datos del gasto (categoria, cantidad, fecha, descripcion)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
-        required: false
         content:
           application/json:
             schema:
               type: object
+              required:
+                - categoria
+                - cantidad
               properties:
-                expenses:
-                  type: array
+                categoria:
+                  type: string
+                  example: "Comida"
+                cantidad:
+                  type: number
+                  example: 150.50
+                descripcion:
+                  type: string
+                  example: "Almuerzo"
+                fecha:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Gasto creado exitosamente
+
+  /api/v2/firebase/users/{usuario_id}/asesor-financiero:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Análisis completo con IA
+      description: |
+        Devuelve análisis integral del usuario con IA incluyendo:
+        - Predicciones de gastos futuros (30 días)
+        - Análisis estadístico completo
+        - Recomendaciones personalizadas de ahorro
+        - Datos para gráficos
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/asesor-financiero`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **📥 Parámetros:**
+        - `usuario_id` (path): ID del usuario en Firebase
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: OK
+          description: Análisis completo generado
+
+  /api/v2/firebase/users/{usuario_id}/predicciones:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Predicciones para usuario
+      description: |
+        Obtiene todas las predicciones de gastos para un usuario específico.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/predicciones`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Predicciones generadas
+
+  /api/v2/firebase/users/{usuario_id}/analisis:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Análisis estadístico para usuario
+      description: |
+        Obtiene análisis estadístico completo para un usuario específico.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/analisis`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis generado
+
+  /api/v2/firebase/users/{usuario_id}/recomendaciones:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Recomendaciones para usuario
+      description: |
+        Obtiene recomendaciones personalizadas de ahorro para un usuario.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/recomendaciones`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recomendaciones generadas
+
+  /api/v2/firebase/users/{usuario_id}/graficos:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Gráficos para usuario
+      description: |
+        Genera todos los gráficos para un usuario específico.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/graficos`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gráficos generados
+
+  /api/v2/firebase/users/{usuario_id}/score:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Puntuación financiera del usuario
+      description: |
+        Calcula la puntuación de salud financiera del usuario (0-100).
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/score`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Puntuación calculada
