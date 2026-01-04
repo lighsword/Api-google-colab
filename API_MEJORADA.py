@@ -33,7 +33,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from werkzeug.exceptions import BadRequest
 from firebase_admin import auth as firebase_auth
 from functools import wraps
@@ -167,12 +167,12 @@ def generate_token(user_id='default_user'):
         return None
 
 def verify_token(token):
-    """Verifica la validez del JWT token"""
+    """Verifica la validez del JWT token. Devuelve payload si es válido, False si no."""
     try:
         if token not in active_tokens:
             return False
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-        return True
+        return payload
     except jwt.ExpiredSignatureError:
         return False
     except jwt.InvalidTokenError:
@@ -197,8 +197,14 @@ def token_required(f):
         if not token:
             return jsonify({'error': 'Token requerido. Obtener en /api/v2/auth/token'}), 401
         
-        if not verify_token(token):
+        payload = verify_token(token)
+        if not payload:
             return jsonify({'error': 'Token inválido o expirado'}), 401
+        # Exponer user_id en el contexto de la request
+        try:
+            g.user_id = payload.get('user_id')
+        except Exception:
+            pass
         
         return f(*args, **kwargs)
     return decorated
@@ -262,6 +268,46 @@ def prepare_dataframe(expenses):
     df['fecha'] = pd.to_datetime(df['fecha'])
     df['monto'] = pd.to_numeric(df['monto'])
     return df.sort_values('fecha').reset_index(drop=True)
+
+
+def _expenses_from_firebase_for_user(user_id):
+    """Obtiene gastos de Firestore y los adapta al esquema esperado por endpoints (fecha, monto, categoria)."""
+    if not FIREBASE_AVAILABLE or not db:
+        return None, 'Firebase no disponible'
+    gastos, error = obtener_gastos_firebase(user_id)
+    if error:
+        return None, error
+    expenses = []
+    for g_item in gastos:
+        try:
+            dt = procesar_fecha(g_item.get('fecha') or g_item.get('createdAt'))
+            categoria = g_item.get('categoria') or 'Sin categoría'
+            monto_val = g_item.get('cantidad') if 'cantidad' in g_item else g_item.get('monto', 0)
+            monto = float(monto_val) if monto_val is not None else 0.0
+            expenses.append({
+                'fecha': dt.strftime('%Y-%m-%d'),
+                'monto': monto,
+                'categoria': categoria
+            })
+        except Exception:
+            continue
+    return expenses, None
+
+
+def _get_expenses_or_firebase(data):
+    """Devuelve expenses del body si son válidos; si no, intenta cargarlos desde Firebase usando g.user_id."""
+    data = data or {}
+    expenses = data.get('expenses') or []
+    if expenses and validate_expense_data(expenses):
+        return expenses, None
+    # Intentar con Firebase si hay user_id en token
+    try:
+        user_id = getattr(g, 'user_id', None)
+    except Exception:
+        user_id = None
+    if user_id:
+        return _expenses_from_firebase_for_user(user_id)
+    return None, 'No se proporcionaron expenses y no se pudo determinar el usuario'
 
 
 # ============================================================
@@ -1808,7 +1854,7 @@ def validate_token_endpoint():
         if not token:
             return jsonify({'valid': False, 'message': 'Token no proporcionado'}), 400
         
-        is_valid = verify_token(token)
+        is_valid = bool(verify_token(token))
         return jsonify({
             'valid': is_valid,
             'message': 'Token válido' if is_valid else 'Token inválido o expirado'
@@ -2128,7 +2174,8 @@ def crear_gasto_firebase(usuario_id):
             'categoria': categoria,
             'descripcion': data.get('descripcion', ''),
             'fecha': data.get('fecha', datetime.now().isoformat()),
-            'createdAt': datetime.now().isoformat()
+            'createdAt': datetime.now().isoformat(),
+            'userId': usuario_id
         }
         
         # Verificación opcional de Firebase ID Token para respetar reglas de escritura
@@ -2168,10 +2215,9 @@ def predict_category():
     """Predicción separada por categoría (30 días). REQUIERE TOKEN."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         predictions = predict_by_category(df, days=30)
@@ -2185,14 +2231,14 @@ def predict_category():
 
 
 @app.route('/api/v2/predict-monthly', methods=['POST'])
+@token_required
 def predict_monthly_endpoint():
     """Predicción mensual con 30 días."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         predictions = predict_monthly(df, days=30)
@@ -2206,14 +2252,14 @@ def predict_monthly_endpoint():
 
 
 @app.route('/api/v2/detect-anomalies', methods=['POST'])
+@token_required
 def detect_anomalies_endpoint():
     """Detección automática de anomalías."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         anomalies = detect_anomalies(df)
@@ -2227,14 +2273,14 @@ def detect_anomalies_endpoint():
 
 
 @app.route('/api/v2/compare-models', methods=['POST'])
+@token_required
 def compare_models_endpoint():
     """Comparación de múltiples modelos ML."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         comparison = compare_models(df)
@@ -2248,14 +2294,14 @@ def compare_models_endpoint():
 
 
 @app.route('/api/v2/seasonality', methods=['POST'])
+@token_required
 def seasonality_endpoint():
     """Análisis de estacionalidad."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         seasonality = analyze_seasonality(df)
@@ -2269,14 +2315,14 @@ def seasonality_endpoint():
 
 
 @app.route('/api/v2/analysis-complete', methods=['POST'])
+@token_required
 def analysis_complete():
     """Análisis completo con las 5 mejoras."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         
@@ -2298,14 +2344,14 @@ def analysis_complete():
 
 
 @app.route('/api/v2/stat/correlations', methods=['POST'])
+@token_required
 def correlations_endpoint():
     """Análisis de correlaciones entre categorías."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         correlations = analyze_correlations(df)
@@ -2319,14 +2365,14 @@ def correlations_endpoint():
 
 
 @app.route('/api/v2/stat/temporal-comparison', methods=['POST'])
+@token_required
 def temporal_comparison_endpoint():
     """Comparación mes actual vs anterior."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         comparison = analyze_temporal_comparison(df)
@@ -2340,15 +2386,15 @@ def temporal_comparison_endpoint():
 
 
 @app.route('/api/v2/stat/clustering', methods=['POST'])
+@token_required
 def clustering_endpoint():
     """Agrupamiento automático de gastos similares."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         n_clusters = data.get('n_clusters', 3)
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         clusters = perform_clustering(df, n_clusters=n_clusters)
@@ -2362,14 +2408,14 @@ def clustering_endpoint():
 
 
 @app.route('/api/v2/stat/trends', methods=['POST'])
+@token_required
 def trends_endpoint():
     """Detección de tendencias en gastos."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
-        
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        expenses, err = _get_expenses_or_firebase(data)
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         trends = detect_trends(df)
@@ -2383,14 +2429,15 @@ def trends_endpoint():
 
 
 @app.route('/api/v2/stat/outliers', methods=['POST'])
+@token_required
 def outliers_endpoint():
     """Detección de gastos atípicos con IQR y Z-Score."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         outliers = detect_outliers_iqr(df)
@@ -2404,14 +2451,15 @@ def outliers_endpoint():
 
 
 @app.route('/api/v2/stat/complete', methods=['POST'])
+@token_required
 def statistical_analysis_complete():
     """Análisis estadístico completo (todas las 5 mejoras)."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         
@@ -2433,17 +2481,18 @@ def statistical_analysis_complete():
 
 
 @app.route('/api/v2/savings/goals', methods=['POST'])
+@token_required
 def savings_goals_endpoint():
     """Calcular metas de ahorro personalizadas."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         goal_name = data.get('goal_name', 'Meta')
         target_amount = data.get('target_amount', 1000)
         months = data.get('months', 12)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         goals = calculate_savings_goals(df, goal_name, target_amount, months)
@@ -2457,14 +2506,15 @@ def savings_goals_endpoint():
 
 
 @app.route('/api/v2/savings/tips', methods=['POST'])
+@token_required
 def personalized_tips_endpoint():
     """Generar tips personalizados de ahorro."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         tips = generate_personalized_tips(df)
@@ -2478,15 +2528,16 @@ def personalized_tips_endpoint():
 
 
 @app.route('/api/v2/savings/budget-alerts', methods=['POST'])
+@token_required
 def budget_alerts_endpoint():
     """Generar alertas de presupuesto."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         monthly_budget = data.get('monthly_budget', 3000)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         alerts = generate_budget_alerts(df, monthly_budget)
@@ -2500,15 +2551,16 @@ def budget_alerts_endpoint():
 
 
 @app.route('/api/v2/savings/health-score', methods=['POST'])
+@token_required
 def health_score_endpoint():
     """Calcular puntuación de salud financiera."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         monthly_budget = data.get('monthly_budget', 3000)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         score = calculate_financial_health_score(df, monthly_budget)
@@ -2522,14 +2574,15 @@ def health_score_endpoint():
 
 
 @app.route('/api/v2/savings/weekly-report', methods=['POST'])
+@token_required
 def weekly_report_endpoint():
     """Generar resumen semanal para reportes automáticos."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         report = generate_weekly_report(df)
@@ -2543,18 +2596,19 @@ def weekly_report_endpoint():
 
 
 @app.route('/api/v2/savings/complete', methods=['POST'])
+@token_required
 def savings_analysis_complete():
     """Análisis completo de recomendaciones (todas las 5 mejoras)."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         goal_name = data.get('goal_name', 'Meta general')
         target_amount = data.get('target_amount', 5000)
         months = data.get('months', 12)
         monthly_budget = data.get('monthly_budget', 3000)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         
@@ -2576,14 +2630,15 @@ def savings_analysis_complete():
 
 
 @app.route('/api/v2/charts/heatmap', methods=['POST'])
+@token_required
 def heatmap_endpoint():
     """Generar calendario de calor de gastos."""
     try:
         data = request.get_json()
-        expenses = data.get('expenses', [])
+        expenses, err = _get_expenses_or_firebase(data)
         
-        if not expenses or not validate_expense_data(expenses):
-            return jsonify({'error': 'Datos inválidos'}), 400
+        if not expenses:
+            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         heatmap = generate_heatmap(df)
@@ -2597,6 +2652,7 @@ def heatmap_endpoint():
 
 
 @app.route('/api/v2/charts/sankey', methods=['POST'])
+@token_required
 def sankey_endpoint():
     """Generar diagrama Sankey de flujo de dinero."""
     try:
@@ -2618,6 +2674,7 @@ def sankey_endpoint():
 
 
 @app.route('/api/v2/charts/dashboard', methods=['POST'])
+@token_required
 def dashboard_endpoint():
     """Generar dashboard interactivo."""
     try:
@@ -2639,6 +2696,7 @@ def dashboard_endpoint():
 
 
 @app.route('/api/v2/charts/comparison', methods=['POST'])
+@token_required
 def comparison_endpoint():
     """Generar gráficos comparativos mes vs mes."""
     try:
@@ -2660,6 +2718,7 @@ def comparison_endpoint():
 
 
 @app.route('/api/v2/charts/export', methods=['POST'])
+@token_required
 def export_graphics_endpoint():
     """Exportar gráficos como imágenes (JSON o BASE64)."""
     try:
@@ -2682,6 +2741,7 @@ def export_graphics_endpoint():
 
 
 @app.route('/api/v2/charts/complete', methods=['POST'])
+@token_required
 def charts_complete():
     """Generar todos los gráficos disponibles."""
     try:

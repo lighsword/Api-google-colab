@@ -30,6 +30,8 @@ Base de datos: gestofin
 
 ## 📋 Endpoints Firebase
 
+> Nota: si envías los endpoints de análisis sin `expenses`, la API ahora cargará automáticamente los gastos del usuario autenticado desde Firebase (`users/{userId}/gastos`). Asegúrate de enviar el header `Authorization: Bearer {token}` para que se identifique tu `user_id`.
+
 ### 🔧 Debug - Verificar Conexión
 ```
 GET /api/v2/firebase/debug
@@ -278,13 +280,13 @@ Body:
 
 | Endpoint | Token JWT | Body JSON |
 |----------|-----------|-----------|
-| `/firebase/debug` | ❌ No | *(no aplica)* |
-| `/firebase/usuarios` | ❌ No | *(no aplica)* |
-| `/firebase/usuarios/{id}` | ❌ No | *(no aplica)* |
-| `/firebase/users/{id}/gastos` GET | ❌ No | *(no aplica)* |
-| `/firebase/users/{id}/gastos-ids` | ❌ No | *(no aplica)* |
-| `/firebase/users/{id}/gastos-procesados` | ✅ Sí | *(no aplica)* |
-| `/firebase/users/{id}/gastos` POST | ✅ Sí | `{"cantidad":..., "categoria":...}` |
+| `/api/v2/firebase/debug` | ❌ No | *(no aplica)* |
+| `/api/v2/firebase/usuarios` | ❌ No | *(no aplica)* |
+| `/api/v2/firebase/usuarios/{id}` | ❌ No | *(no aplica)* |
+| `/api/v2/firebase/users/{id}/gastos` GET | ❌ No | *(no aplica)* |
+| `/api/v2/firebase/users/{id}/gastos-ids` | ❌ No | *(no aplica)* |
+| `/api/v2/firebase/users/{id}/gastos-procesados` | ✅ Sí | *(no aplica)* |
+| `/api/v2/firebase/users/{id}/gastos` POST | ✅ Sí | `{"cantidad":..., "categoria":...}` |
 
 ---
 
@@ -545,16 +547,16 @@ final tips = data['recomendaciones']['tips_personalizados'];
 
 | Endpoint | Método | Token | Descripción |
 |----------|--------|-------|-------------|
-| `/firebase/debug` | GET | ❌ | Verificar conexión |
-| `/firebase/usuarios` | GET | ❌ | Listar usuarios |
-| `/firebase/usuarios/{id}` | GET | ❌ | Ver usuario |
-| `/firebase/users/{id}/gastos` | GET | ❌ | Ver gastos |
-| `/firebase/users/{id}/gastos` | POST | ✅ | Crear gasto |
-| `/firebase/users/{id}/gastos-ids` | GET | ❌ | Solo IDs |
-| `/firebase/users/{id}/gastos-procesados` | GET | ✅ | Análisis básico |
-| `/firebase/users/{id}/asesor-financiero` | GET | ✅ | **🤖 ASESOR COMPLETO** |
-| `/firebase/users/{id}/predicciones` | GET | ✅ | Solo predicciones |
-| `/firebase/users/{id}/analisis` | GET | ✅ | Solo estadísticas |
-| `/firebase/users/{id}/recomendaciones` | GET | ✅ | Solo consejos |
-| `/firebase/users/{id}/graficos` | GET | ✅ | Solo gráficos |
-| `/firebase/users/{id}/score` | GET | ✅ | Solo score |
+| `/api/v2/firebase/debug` | GET | ❌ | Verificar conexión |
+| `/api/v2/firebase/usuarios` | GET | ❌ | Listar usuarios |
+| `/api/v2/firebase/usuarios/{id}` | GET | ❌ | Ver usuario |
+| `/api/v2/firebase/users/{id}/gastos` | GET | ❌ | Ver gastos |
+| `/api/v2/firebase/users/{id}/gastos` | POST | ✅ | Crear gasto |
+| `/api/v2/firebase/users/{id}/gastos-ids` | GET | ❌ | Solo IDs |
+| `/api/v2/firebase/users/{id}/gastos-procesados` | GET | ✅ | Análisis básico |
+| `/api/v2/firebase/users/{id}/asesor-financiero` | GET | ✅ | **🤖 ASESOR COMPLETO** |
+| `/api/v2/firebase/users/{id}/predicciones` | GET | ✅ | Solo predicciones |
+| `/api/v2/firebase/users/{id}/analisis` | GET | ✅ | Solo estadísticas |
+| `/api/v2/firebase/users/{id}/recomendaciones` | GET | ✅ | Solo consejos |
+| `/api/v2/firebase/users/{id}/graficos` | GET | ✅ | Solo gráficos |
+| `/api/v2/firebase/users/{id}/score` | GET | ✅ | Solo score |
