@@ -6,9 +6,254 @@ API Flask con machine learning para análisis de gastos, predicciones y recomend
 
 ## 📜 Swagger / OpenAPI
 
-Esta API está documentada con OpenAPI 3.0 (Swagger). Puedes:
-- Abrir el archivo [swagger.yaml](swagger.yaml) en Swagger Editor (https://editor.swagger.io).
-- Copiar el bloque YAML de abajo en tu herramienta favorita.
+Esta API está documentada con OpenAPI 3.0 (Swagger) y organizada por módulos.
+
+- Ver documentación completa: abre [swagger.yaml](swagger.yaml) en Swagger Editor (https://editor.swagger.io).
+- Autenticación: muchas rutas requieren Bearer JWT. Primero consigue tu token.
+- Módulos: Auth, Health, Firebase, Predictions, Statistics, Savings, Charts.
+
+---
+
+## 📘 Endpoints + Swagger (claros y breves)
+
+A continuación, cada endpoint clave con su resumen y el fragmento Swagger que indica qué necesita y qué devuelve. La especificación completa está en [swagger.yaml](swagger.yaml).
+
+### Auth
+
+- Obtener token JWT: `POST /api/v2/auth/token`
+
+```yaml
+post:
+  summary: Obtener token JWT
+  tags: [Auth]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            user_id:
+              type: string
+  responses:
+    '200':
+      description: Token generado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TokenResponse'
+    '500':
+      description: Error generando token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+```
+
+- Validar token: `POST /api/v2/auth/validate`
+
+```yaml
+post:
+  summary: Validar token JWT
+  tags: [Auth]
+  responses:
+    '200':
+      description: Validación
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidateResponse'
+```
+
+### Firebase
+
+- Listar gastos: `GET /api/v2/firebase/users/{usuario_id}/gastos`
+
+```yaml
+get:
+  summary: Listar gastos de un usuario
+  tags: [Firebase]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: ids_only
+      schema:
+        type: string
+        enum: [true, false]
+  responses:
+    '200': { description: Lista de gastos }
+    '503': { description: Firebase no disponible }
+```
+
+- Crear gasto: `POST /api/v2/firebase/users/{usuario_id}/gastos` (requiere Bearer JWT)
+
+```yaml
+post:
+  summary: Crear gasto para un usuario
+  tags: [Firebase]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [cantidad, categoria]
+          properties:
+            cantidad: { type: number }
+            categoria: { type: string }
+            descripcion: { type: string }
+            fecha: { type: string }
+  responses:
+    '201':
+      description: Gasto creado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StatusSuccess'
+    '400': { description: Datos inválidos }
+    '503': { description: Firebase no disponible }
+```
+
+### Predictions
+
+- Predicción mensual: `GET /api/v2/firebase/users/{usuario_id}/predict-monthly` (Bearer JWT)
+
+```yaml
+get:
+  summary: Predicción mensual (30 días)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PredictionMonthly'
+      examples:
+        ejemplo:
+          value:
+            status: success
+            data:
+              diarias:
+                - fecha: 2026-01-04
+                  prediccion: 85.2
+                  min: 70.0
+                  max: 100.5
+                  semana: 1
+                  dia_semana: Monday
+              total_mes: 2450.8
+              promedio_diario: 81.7
+              resumen_semanal:
+                1: { total: 600.4, promedio_diario: 85.77 }
+```
+
+- Análisis completo: `GET /api/v2/firebase/users/{usuario_id}/analysis-complete` (Bearer JWT)
+
+```yaml
+get:
+  summary: Análisis completo (predicciones)
+  tags: [Predictions]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+### Statistics
+
+- Comparación temporal: `GET /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison` (Bearer JWT)
+
+```yaml
+get:
+  summary: Mes actual vs anterior
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+- Outliers: `GET /api/v2/firebase/users/{usuario_id}/stat/outliers` (Bearer JWT)
+
+```yaml
+get:
+  summary: Outliers (IQR + Z-Score)
+  tags: [Statistics]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+  responses:
+    '200': { description: OK }
+```
+
+### Savings
+
+- Ahorro completo: `GET /api/v2/firebase/users/{usuario_id}/savings/complete` (Bearer JWT)
+
+```yaml
+get:
+  summary: Ahorro completo (todos módulos)
+  tags: [Savings]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: goal_name
+      schema: { type: string }
+    - in: query
+      name: target_amount
+      schema: { type: number, default: 5000 }
+    - in: query
+      name: months
+      schema: { type: integer, default: 12 }
+    - in: query
+      name: monthly_budget
+      schema: { type: number, default: 3000 }
+  responses:
+    '200': { description: OK }
+```
+
+### Charts
+
+- Exportar gráficos: `GET /api/v2/firebase/users/{usuario_id}/charts/export?format=json|base64` (Bearer JWT)
+
+```yaml
+get:
+  summary: Exportar gráficos
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  parameters:
+    - $ref: '#/components/parameters/UsuarioId'
+    - in: query
+      name: format
+      schema: { type: string, enum: [json, base64], default: json }
+  responses:
+    '200':
+      description: OK
+      examples:
+        json:
+          value:
+            formato: json
+            graficos:
+              - nombre: Pie Categorías
+                json: '{...}'
+        base64:
+          value:
+            formato: base64
+            graficos:
+              - nombre: Pie Categorías
+                base64: iVBORw0KGgoAAA...
+```
+
+---
 
 ```yaml
 openapi: 3.0.3
@@ -25,6 +270,21 @@ servers:
     description: Producción (Render)
 security:
   - bearerAuth: []
+tags:
+  - name: Auth
+    description: Autenticación y validación de token JWT
+  - name: Health
+    description: Estado de la API
+  - name: Firebase
+    description: Lectura/escritura de datos en Firestore
+  - name: Predictions
+    description: Predicciones y análisis de gasto futuro
+  - name: Statistics
+    description: Análisis estadístico y detecciones
+  - name: Savings
+    description: Metas de ahorro, tips y salud financiera
+  - name: Charts
+    description: Gráficos y exportaciones
 components:
   securitySchemes:
     bearerAuth:
@@ -43,12 +303,14 @@ paths:
   /api/v2/health:
     get:
       summary: Estado de la API
+      tags: [Health]
       responses:
         '200':
           description: OK
   /api/v2/auth/token:
     post:
       summary: Obtener token JWT
+      tags: [Auth]
       requestBody:
         required: false
         content:
@@ -64,18 +326,21 @@ paths:
   /api/v2/auth/validate:
     post:
       summary: Validar token JWT
+      tags: [Auth]
       responses:
         '200':
           description: Validación
   /api/v2/firebase/usuarios:
     get:
       summary: Listar usuarios (colección users)
+      tags: [Firebase]
       responses:
         '200':
           description: Usuarios listados
   /api/v2/firebase/usuarios/{usuario_id}:
     get:
       summary: Obtener usuario con budget/current
+      tags: [Firebase]
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
       responses:
@@ -84,6 +349,7 @@ paths:
   /api/v2/firebase/users/{usuario_id}/gastos:
     get:
       summary: Listar gastos de un usuario
+      tags: [Firebase]
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
         - in: query
@@ -96,6 +362,7 @@ paths:
           description: Lista de gastos
     post:
       summary: Crear gasto para un usuario
+      tags: [Firebase]
       security:
         - bearerAuth: []
       parameters:
@@ -122,6 +389,7 @@ paths:
   /api/v2/firebase/users/{usuario_id}/gastos-ids:
     get:
       summary: Listar solo IDs de gastos
+      tags: [Firebase]
       parameters:
         - $ref: '#/components/parameters/UsuarioId'
       responses:
@@ -130,6 +398,7 @@ paths:
   /api/v2/firebase/users/{usuario_id}/gastos-procesados:
     get:
       summary: Gastos + resumen IA (por categoría)
+      tags: [Firebase]
       security:
         - bearerAuth: []
       parameters:
@@ -152,6 +421,7 @@ paths:
   /api/v2/firebase/users/{usuario_id}/predict-monthly:
     get:
       summary: Predicción mensual (30 días)
+      tags: [Predictions]
       security:
         - bearerAuth: []
       parameters:
@@ -159,6 +429,22 @@ paths:
       responses:
         '200':
           description: OK
+          examples:
+            ejemplo:
+              value:
+                status: success
+                data:
+                  diarias:
+                    - fecha: 2026-01-04
+                      prediccion: 85.2
+                      min: 70.0
+                      max: 100.5
+                      semana: 1
+                      dia_semana: Monday
+                  total_mes: 2450.8
+                  promedio_diario: 81.7
+                  resumen_semanal:
+                    1: { total: 600.4, promedio_diario: 85.77 }
   /api/v2/firebase/users/{usuario_id}/detect-anomalies:
     get:
       summary: Detección de anomalías
@@ -416,6 +702,7 @@ paths:
   /api/v2/firebase/users/{usuario_id}/charts/export:
     get:
       summary: Exportar gráficos
+      tags: [Charts]
       security:
         - bearerAuth: []
       parameters:
@@ -429,6 +716,19 @@ paths:
       responses:
         '200':
           description: OK
+          examples:
+            json:
+              value:
+                formato: json
+                graficos:
+                  - nombre: Pie Categorías
+                    json: '{...}'
+            base64:
+              value:
+                formato: base64
+                graficos:
+                  - nombre: Pie Categorías
+                    base64: iVBORw0KGgoAAA...
   /api/v2/firebase/users/{usuario_id}/charts/complete:
     get:
       summary: Todos los gráficos
