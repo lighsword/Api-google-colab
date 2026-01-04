@@ -10,817 +10,33 @@ info:
 servers:
   openapi: 3.0.3
   info:
-    title: API Mejorada - Documentación
+    title: Gestor Financiero IA API
     version: "2.0"
-    description: Documentación compacta por endpoint, igual al README.
+    description: |
+      API Flask con análisis de gastos, predicciones y recomendaciones de ahorro, integrada con Firebase Firestore.
+      Autenticación vía JWT. Muchas rutas aceptan GET con query params para conveniencia.
   servers:
-    - url: /api/v2
-  paths:
-    /auth/token:
-      post:
-        summary: Obtener token JWT
-        tags: [Auth]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  user_id:
-                    type: string
-        responses:
-          '200':
-            description: Token generado
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/TokenResponse'
-          '500':
-            description: Error generando token
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/ErrorResponse'
-    /auth/validate:
-      post:
-        summary: Validar token JWT
-        tags: [Auth]
-        responses:
-          '200':
-            description: Validación
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/ValidateResponse'
-    /health:
-      get:
-        summary: Estado de la API
-        tags: [Health]
-        responses:
-          '200': { description: OK }
-    /firebase/debug:
-      get:
-        summary: Diagnóstico Firestore
-        tags: [Firebase]
-        responses:
-          '200': { description: Datos de conexión }
-          '503': { description: Firebase no disponible }
-    /firebase/usuarios:
-      get:
-        summary: Listar usuarios (colección users)
-        tags: [Firebase]
-        responses:
-          '200': { description: Usuarios listados }
-          '503': { description: Firebase no disponible }
-    /firebase/usuarios/{usuario_id}:
-      get:
-        summary: Obtener usuario con budget/current
-        tags: [Firebase]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: Usuario encontrado }
-          '404': { description: Usuario no existe }
-          '503': { description: Firebase no disponible }
-    /firebase/users/{usuario_id}/gastos:
-      get:
-        summary: Listar gastos de un usuario
-        tags: [Firebase]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: ids_only
-            schema:
-              type: string
-              enum: [true, false]
-        responses:
-          '200': { description: Lista de gastos }
-          '503': { description: Firebase no disponible }
-      post:
-        summary: Crear gasto para un usuario
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        requestBody:
-          required: true
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [cantidad, categoria]
-                properties:
-                  cantidad: { type: number }
-                  categoria: { type: string }
-                  descripcion: { type: string }
-                  fecha: { type: string }
-        responses:
-          '201': { description: Gasto creado }
-          '400': { description: Datos inválidos }
-          '503': { description: Firebase no disponible }
-    /firebase/users/{usuario_id}/gastos-procesados:
-      get:
-        summary: Gastos + resumen IA (por categoría)
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-          '503': { description: Firebase no disponible }
-    /firebase/users/{usuario_id}/gastos-ids:
-      get:
-        summary: Listar solo IDs de gastos
-        tags: [Firebase]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-          '503': { description: Firebase no disponible }
-    /firebase/users/{usuario_id}/asesor-financiero:
-      get:
-        summary: Asesor financiero IA completo
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/predicciones:
-      get:
-        summary: Solo predicciones de gastos
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/analisis:
-      get:
-        summary: Solo análisis estadístico
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: period
-            schema: { type: string, enum: [month, year, quarter] }
-          - in: query
-            name: value
-            schema: { type: string }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/recomendaciones:
-      get:
-        summary: Solo recomendaciones de ahorro
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/graficos:
-      get:
-        summary: Solo datos para gráficos
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/score:
-      get:
-        summary: Score de salud financiera
-        tags: [Firebase]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/predict-category:
-      get:
-        summary: Predicción por categoría (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/predict-monthly:
-      get:
-        summary: Predicción mensual (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200':
-            description: OK
-            content:
-              application/json:
-                schema:
-                  $ref: '#/components/schemas/PredictionMonthly'
-            examples:
-              ejemplo:
-                value:
-                  status: success
-                  data:
-                    diarias:
-                      - fecha: 2026-01-04
-                        prediccion: 85.2
-                        min: 70.0
-                        max: 100.5
-                        semana: 1
-                        dia_semana: Monday
-                    total_mes: 2450.8
-                    promedio_diario: 81.7
-                    resumen_semanal:
-                      1: { total: 600.4, promedio_diario: 85.77 }
-    /firebase/users/{usuario_id}/detect-anomalies:
-      get:
-        summary: Detección de anomalías
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/compare-models:
-      get:
-        summary: Comparación de modelos ML
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/seasonality:
-      get:
-        summary: Análisis de estacionalidad
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/analysis-complete:
-      get:
-        summary: Análisis completo (predicciones)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/correlations:
-      get:
-        summary: Correlaciones entre categorías
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/temporal-comparison:
-      get:
-        summary: Mes actual vs anterior
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/clustering:
-      get:
-        summary: Clustering de gastos
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: n_clusters
-            schema: { type: integer, default: 3 }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/trends:
-      get:
-        summary: Detección de tendencias
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/outliers:
-      get:
-        summary: Outliers (IQR + Z-Score)
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/stat/complete:
-      get:
-        summary: Estadístico completo
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/goals:
-      get:
-        summary: Metas de ahorro
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: goal_name
-            schema: { type: string }
-          - in: query
-            name: target_amount
-            schema: { type: number, default: 1000 }
-          - in: query
-            name: months
-            schema: { type: integer, default: 12 }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/tips:
-      get:
-        summary: Tips personalizados
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/budget-alerts:
-      get:
-        summary: Alertas de presupuesto
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: monthly_budget
-            schema: { type: number, default: 3000 }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/health-score:
-      get:
-        summary: Puntuación financiera
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: monthly_budget
-            schema: { type: number, default: 3000 }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/weekly-report:
-      get:
-        summary: Reporte semanal
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/savings/complete:
-      get:
-        summary: Ahorro completo (todos módulos)
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: goal_name
-            schema: { type: string }
-          - in: query
-            name: target_amount
-            schema: { type: number, default: 5000 }
-          - in: query
-            name: months
-            schema: { type: integer, default: 12 }
-          - in: query
-            name: monthly_budget
-            schema: { type: number, default: 3000 }
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/charts/heatmap:
-      get:
-        summary: Calendario de calor
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK (si Plotly disponible) }
-    /firebase/users/{usuario_id}/charts/sankey:
-      get:
-        summary: Diagrama Sankey
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/charts/dashboard:
-      get:
-        summary: Dashboard interactivo
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/charts/comparison:
-      get:
-        summary: Comparativas mes vs mes
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /firebase/users/{usuario_id}/charts/export:
-      get:
-        summary: Exportar gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-          - in: query
-            name: format
-            schema: { type: string, enum: [json, base64], default: json }
-        responses:
-          '200':
-            description: OK
-            content:
-              application/json:
-                examples:
-                  json:
-                    value:
-                      formato: json
-                      graficos:
-                        - nombre: Pie Categorías
-                          json: '{...}'
-                  base64:
-                    value:
-                      formato: base64
-                      graficos:
-                        - nombre: Pie Categorías
-                          base64: iVBORw0KGgoAAA...
-    /firebase/users/{usuario_id}/charts/complete:
-      get:
-        summary: Todos los gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - $ref: '#/components/parameters/UsuarioId'
-        responses:
-          '200': { description: OK }
-    /predict-category:
-      get:
-        summary: Predicción por categoría (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Predicción por categoría (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /predict-monthly:
-      get:
-        summary: Predicción mensual (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Predicción mensual (30 días)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /detect-anomalies:
-      get:
-        summary: Detección de anomalías
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Detección de anomalías
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /compare-models:
-      get:
-        summary: Comparación de modelos ML
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Comparación de modelos ML
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /seasonality:
-      get:
-        summary: Análisis de estacionalidad
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Análisis de estacionalidad
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /analysis-complete:
-      get:
-        summary: Análisis completo (predicciones)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Análisis completo (predicciones)
-        tags: [Predictions]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses:
-                    type: array
-        responses:
-          '200': { description: OK }
-    /stat/{name}:
-      get:
-        summary: Análisis estadístico
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [correlations, temporal-comparison, clustering, trends, outliers, complete]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Análisis estadístico
-        tags: [Statistics]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [correlations, temporal-comparison, clustering, trends, outliers, complete]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
-    /savings/{name}:
-      get:
-        summary: Recomendaciones de ahorro / salud financiera
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [goals, tips, budget-alerts, health-score, weekly-report, complete]
-          - in: query
-            name: monthly_budget
-            schema: { type: number, default: 3000 }
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Recomendaciones de ahorro / salud financiera
-        tags: [Savings]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [goals, tips, budget-alerts, health-score, weekly-report, complete]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-                  monthly_budget: { type: number }
-        responses:
-          '200': { description: OK }
-    /charts/heatmap:
-      get:
-        summary: Calendario de calor
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Calendario de calor
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
-    /charts/sankey:
-      get:
-        summary: Diagrama Sankey
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Diagrama Sankey
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
-    /charts/dashboard:
-      get:
-        summary: Dashboard interactivo
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Dashboard interactivo
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
-    /charts/comparison:
-      get:
-        summary: Comparativas mes vs mes
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Comparativas mes vs mes
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
-    /charts/export:
-      get:
-        summary: Exportar gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: query
-            name: format
-            schema: { type: string, enum: [json, base64], default: json }
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Exportar gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-                  format: { type: string }
-        responses:
-          '200': { description: OK }
-    /charts/complete:
-      get:
-        summary: Todos los gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        responses:
-          '200': { description: OK }
-      post:
-        summary: Todos los gráficos
-        tags: [Charts]
-        security: [ { bearerAuth: [] } ]
-        requestBody:
-          required: false
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  expenses: { type: array }
-        responses:
-          '200': { description: OK }
+    - url: http://localhost:5000
+      description: Servidor local
+    - url: https://your-render-service.onrender.com
+      description: Producción (Render)
+  security:
+    - bearerAuth: []
+  tags:
+    - name: Auth
+      description: Autenticación y validación de token JWT
+    - name: Health
+      description: Estado de la API
+    - name: Firebase
+      description: Lectura/escritura de datos en Firestore
+    - name: Predictions
+      description: Predicciones y análisis de gasto futuro
+    - name: Statistics
+      description: Análisis estadístico y detecciones
+    - name: Savings
+      description: Metas de ahorro, tips y salud financiera
+    - name: Charts
+      description: Gráficos y exportaciones
   components:
     securitySchemes:
       bearerAuth:
@@ -829,11 +45,12 @@ servers:
         bearerFormat: JWT
     parameters:
       UsuarioId:
-        name: usuario_id
         in: path
+        name: usuario_id
         required: true
         schema:
           type: string
+        description: ID del usuario en Firestore (colección users)
     schemas:
       TokenResponse:
         type: object
@@ -877,3 +94,436 @@ servers:
                   properties:
                     total: { type: number }
                     promedio_diario: { type: number }
+  paths:
+    /api/v2/auth/token:
+      post:
+        summary: Obtener token JWT
+        tags: [Auth]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+        responses:
+          '200':
+            description: Token generado
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/TokenResponse'
+          '500':
+            description: Error generando token
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ErrorResponse'
+    /api/v2/auth/validate:
+      post:
+        summary: Validar token JWT
+        tags: [Auth]
+        responses:
+          '200':
+            description: Validación
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ValidateResponse'
+    /api/v2/health:
+      get:
+        summary: Estado de la API
+        tags: [Health]
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/usuarios:
+      get:
+        summary: Listar usuarios (colección users)
+        tags: [Firebase]
+        responses:
+          '200': { description: Usuarios listados }
+    /api/v2/firebase/usuarios/{usuario_id}:
+      get:
+        summary: Obtener usuario con budget/current
+        tags: [Firebase]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: Usuario encontrado }
+    /api/v2/firebase/users/{usuario_id}/gastos:
+      get:
+        summary: Listar gastos de un usuario
+        tags: [Firebase]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: ids_only
+            schema:
+              type: string
+              enum: [true, false]
+        responses:
+          '200': { description: Lista de gastos }
+      post:
+        summary: Crear gasto para un usuario
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cantidad, categoria]
+                properties:
+                  cantidad: { type: number }
+                  categoria: { type: string }
+                  descripcion: { type: string }
+                  fecha: { type: string }
+        responses:
+          '201': { description: Gasto creado }
+    /api/v2/firebase/users/{usuario_id}/gastos-procesados:
+      get:
+        summary: Gastos + resumen IA (por categoría)
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/gastos-ids:
+      get:
+        summary: Listar solo IDs de gastos
+        tags: [Firebase]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/asesor-financiero:
+      get:
+        summary: Asesor financiero IA completo
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/predicciones:
+      get:
+        summary: Solo predicciones de gastos
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/analisis:
+      get:
+        summary: Solo análisis estadístico
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: period
+            schema: { type: string, enum: [month, year, quarter] }
+          - in: query
+            name: value
+            schema: { type: string }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/recomendaciones:
+      get:
+        summary: Solo recomendaciones de ahorro
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/graficos:
+      get:
+        summary: Solo datos para gráficos
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/score:
+      get:
+        summary: Score de salud financiera
+        tags: [Firebase]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/predict-category:
+      get:
+        summary: Predicción por categoría (30 días)
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/predict-monthly:
+      get:
+        summary: Predicción mensual (30 días)
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200':
+            description: OK
+            examples:
+              ejemplo:
+                value:
+                  status: success
+                  data:
+                    diarias:
+                      - fecha: 2026-01-04
+                        prediccion: 85.2
+                        min: 70.0
+                        max: 100.5
+                        semana: 1
+                        dia_semana: Monday
+                    total_mes: 2450.8
+                    promedio_diario: 81.7
+                    resumen_semanal:
+                      1: { total: 600.4, promedio_diario: 85.77 }
+    /api/v2/firebase/users/{usuario_id}/detect-anomalies:
+      get:
+        summary: Detección de anomalías
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/compare-models:
+      get:
+        summary: Comparación de modelos ML
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/seasonality:
+      get:
+        summary: Análisis de estacionalidad
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/analysis-complete:
+      get:
+        summary: Análisis completo (predicciones)
+        tags: [Predictions]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/correlations:
+      get:
+        summary: Correlaciones entre categorías
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison:
+      get:
+        summary: Mes actual vs anterior
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/clustering:
+      get:
+        summary: Clustering de gastos
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: n_clusters
+            schema: { type: integer, default: 3 }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/trends:
+      get:
+        summary: Detección de tendencias
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/outliers:
+      get:
+        summary: Outliers (IQR + Z-Score)
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/stat/complete:
+      get:
+        summary: Estadístico completo
+        tags: [Statistics]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/goals:
+      get:
+        summary: Metas de ahorro
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: goal_name
+            schema: { type: string }
+          - in: query
+            name: target_amount
+            schema: { type: number, default: 1000 }
+          - in: query
+            name: months
+            schema: { type: integer, default: 12 }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/tips:
+      get:
+        summary: Tips personalizados
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/budget-alerts:
+      get:
+        summary: Alertas de presupuesto
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: monthly_budget
+            schema: { type: number, default: 3000 }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/health-score:
+      get:
+        summary: Puntuación financiera
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: monthly_budget
+            schema: { type: number, default: 3000 }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/weekly-report:
+      get:
+        summary: Reporte semanal
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/savings/complete:
+      get:
+        summary: Ahorro completo (todos módulos)
+        tags: [Savings]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: goal_name
+            schema: { type: string }
+          - in: query
+            name: target_amount
+            schema: { type: number, default: 5000 }
+          - in: query
+            name: months
+            schema: { type: integer, default: 12 }
+          - in: query
+            name: monthly_budget
+            schema: { type: number, default: 3000 }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/charts/heatmap:
+      get:
+        summary: Calendario de calor
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK (si Plotly disponible) }
+    /api/v2/firebase/users/{usuario_id}/charts/sankey:
+      get:
+        summary: Diagrama Sankey
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/charts/dashboard:
+      get:
+        summary: Dashboard interactivo
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/charts/comparison:
+      get:
+        summary: Comparativas mes vs mes
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/charts/export:
+      get:
+        summary: Exportar gráficos
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+          - in: query
+            name: format
+            schema: { type: string, enum: [json, base64], default: json }
+        responses:
+          '200': { description: OK }
+    /api/v2/firebase/users/{usuario_id}/charts/complete:
+      get:
+        summary: Todos los gráficos
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        parameters:
+          - $ref: '#/components/parameters/UsuarioId'
+        responses:
