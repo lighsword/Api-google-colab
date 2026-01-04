@@ -2,17 +2,17 @@
 
 API Flask con machine learning para análisis de gastos, predicciones y recomendaciones de ahorro. Integrada con Firebase Firestore.
 
+---
+
 ## 🔥 Estructura Firebase (Firestore)
 
-La API respeta las siguientes reglas de seguridad:
-
 ```
-users/{userId}                    ← Documento del usuario
-  └── gastos/{gastoId}           ← Subcolección de gastos
-  └── presupuestos/{presupuestoId} ← Subcolección de presupuestos (futuro)
+users/{userId}                       ← Documento del usuario
+  ├── gastos/{gastoId}              ← Subcolección de gastos
+  └── budget/current                ← Documento con presupuesto/ingresos actuales
 ```
 
-**Path principal usado:** `users/{userId}/gastos`
+Base de datos utilizada por la API: `users/{userId}/gastos` y `users/{userId}/budget/current`.
 
 ---
 
@@ -52,8 +52,8 @@ La API estará disponible en `http://localhost:5000`
 2. Ve a [render.com](https://render.com)
 3. Conecta tu repositorio
 4. Crea un "Web Service":
-   - **Build command**: `pip install -r requirements.txt`
-   - **Start command**: `gunicorn API_MEJORADA:app`
+   - Build command: `pip install -r requirements.txt`
+   - Start command: `gunicorn API_MEJORADA:app`
 5. Configura variables de entorno en Render:
    - `SECRET_KEY`: Tu clave secreta
    - `FLASK_ENV`: `production`
@@ -62,463 +62,159 @@ La API estará disponible en `http://localhost:5000`
 
 ---
 
-## 📊 TODOS LOS ENDPOINTS PARA POSTMAN
+## 🔐 Autenticación
 
-### 🔐 Autenticación
+- Obtener token: `POST /api/v2/auth/token`
+- Validar token: `POST /api/v2/auth/validate`
+- Usa el token en: `Authorization: Bearer <token>` o `X-API-Key: <token>`
 
-#### 1. Obtener Token JWT
-```
-POST /api/v2/auth/token
-```
-**Headers:** `Content-Type: application/json`
+Ejemplo para obtener token:
 
-**Body JSON:**
-```json
-{
-  "user_id": "mi_usuario_123"
-}
-```
-
-**Respuesta:**
-```json
-{
-  "status": "success",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expires_in": 86400
-}
+```bash
+curl -X POST http://localhost:5000/api/v2/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"mi_usuario_123"}'
 ```
 
 ---
 
-#### 2. Validar Token
-```
-POST /api/v2/auth/validate
-```
-**Headers:** 
-- `Authorization: Bearer <tu_token>` o
-- `X-API-Key: <tu_token>`
+## 📚 Endpoints base: /api/v2/firebase/users
 
-**Body:** *(vacío, no requiere JSON)*
+Todos los endpoints de usuario están conectados a la ruta base `/api/v2/firebase/users/{usuario_id}` y trabajan directamente con Firestore en `users/{usuario_id}`.
 
-**Respuesta:**
-```json
-{
-  "valid": true,
-  "message": "Token válido"
-}
-```
+> Nota: Algunos endpoints requieren token JWT. Se indica en cada caso.
 
----
+### 1) Gastos
 
-### 🏥 Health Check
+- Listar gastos (sin token): `GET /api/v2/firebase/users/{usuario_id}/gastos`
+  - Query opcional: `?ids_only=true` para devolver solo IDs
 
-#### 3. Estado del servidor
-```
-GET /api/v2/health
-```
-**Headers:** Ninguno requerido
+- Crear gasto (requiere token): `POST /api/v2/firebase/users/{usuario_id}/gastos`
+  - Headers: `Authorization: Bearer <token>`, `Content-Type: application/json`
+  - Body JSON:
+    ```json
+    { "cantidad": 150.50, "categoria": "Alimentación", "descripcion": "Compras", "fecha": "2025-12-15" }
+    ```
 
-**Body:** *(no aplica)*
+- Listar solo IDs (sin token): `GET /api/v2/firebase/users/{usuario_id}/gastos-ids`
 
-**Respuesta:**
-```json
-{
-  "status": "healthy",
-  "firebase": true,
-  "version": "2.0"
-}
-```
+- Gastos procesados con IA (requiere token): `GET /api/v2/firebase/users/{usuario_id}/gastos-procesados`
 
----
+### 2) Asesor financiero (suite completa)
 
-### 🔥 Firebase - Usuarios y Gastos
+- Asesor financiero completo (requiere token): `GET /api/v2/firebase/users/{usuario_id}/asesor-financiero`
+  - Incluye: predicciones 30 días, análisis estadístico, recomendaciones y datos de gráficos.
 
-#### 4. Debug Firebase
-```
-GET /api/v2/firebase/debug
-```
-**Headers:** Ninguno
+### 3) Módulos por separado (todos requieren token)
 
-**Body:** *(no aplica)*
+- Predicciones: `GET /api/v2/firebase/users/{usuario_id}/predicciones`
+- Análisis estadístico (con filtros): `GET /api/v2/firebase/users/{usuario_id}/analisis`
+  - Query opcional:
+    - `period=month&value=YYYY-MM`
+    - `period=year&value=YYYY`
+    - `period=quarter&value=YYYY-Qn`
+- Recomendaciones de ahorro: `GET /api/v2/firebase/users/{usuario_id}/recomendaciones`
+- Datos para gráficos: `GET /api/v2/firebase/users/{usuario_id}/graficos`
+- Score financiero: `GET /api/v2/firebase/users/{usuario_id}/score`
+
+### 4) Utilidades Firebase
+
+- Debug conexión Firestore: `GET /api/v2/firebase/debug`
+- Listar usuarios: `GET /api/v2/firebase/usuarios`
+- Obtener usuario por ID: `GET /api/v2/firebase/usuarios/{usuario_id}`
 
 ---
 
-#### 5. Listar usuarios
-```
-GET /api/v2/firebase/usuarios
-```
-**Headers:** Ninguno
+## 📈 Endpoints de IA generales
 
-**Body:** *(no aplica)*
+Estos endpoints también pueden usar datos de Firebase automáticamente si no envías `expenses` y tu token incluye `user_id`. Alternativamente, puedes enviar `expenses` en el body.
 
----
+Headers comunes: `Authorization: Bearer <token>`, `Content-Type: application/json`
 
-#### 6. Obtener usuario específico
-```
-GET /api/v2/firebase/usuarios/{usuario_id}
-```
-**Ejemplo:** `/api/v2/firebase/usuarios/abc123xyz`
-
-**Headers:** Ninguno
-
-**Body:** *(no aplica)*
-
----
-
-#### 7. Obtener gastos de un usuario
-```
-GET /api/v2/firebase/users/{usuario_id}/gastos
-```
-**Ejemplo:** `/api/v2/firebase/users/abc123xyz/gastos`
-
-**Query params opcionales:** `?ids_only=true`
-
-**Headers:** Ninguno
-
-**Body:** *(no aplica)*
-
-**Respuesta:**
-```json
-{
-  "status": "success",
-  "usuario_id": "abc123xyz",
-  "total_gastos": 5,
-  "path_usado": "users/abc123xyz/gastos",
-  "data": [
-    {"id": "gasto1", "cantidad": 50, "categoria": "Comida", "fecha": "2025-12-01"}
-  ]
-}
-```
-
----
-
-#### 8. Obtener solo IDs de gastos
-```
-GET /api/v2/firebase/users/{usuario_id}/gastos-ids
-```
-**Headers:** Ninguno
-
-**Body:** *(no aplica)*
-
-**Respuesta:**
-```json
-{
-  "status": "success",
-  "ids": ["gasto1", "gasto2", "gasto3"]
-}
-```
-
----
-
-#### 9. Obtener gastos procesados con IA
-```
-GET /api/v2/firebase/users/{usuario_id}/gastos-procesados
-```
-**Headers:** 
-- `Authorization: Bearer <tu_token>`
-
-**Body:** *(no aplica)*
-
-**Respuesta:**
-```json
-{
-  "status": "success",
-  "total_gastos": 10,
-  "gasto_total": 500.0,
-  "promedio_gasto": 50.0,
-  "resumen_por_categoria": {...}
-}
-```
-
----
-
-#### 10. Crear nuevo gasto
-```
-POST /api/v2/firebase/users/{usuario_id}/gastos
-```
-**Headers:** 
-- `Authorization: Bearer <tu_token>`
-- `Content-Type: application/json`
-- *(Opcional)* `X-Firebase-Id-Token: <firebase_id_token>`
-
-**Body JSON:**
-```json
-{
-  "cantidad": 150.50,
-  "categoria": "Alimentación",
-  "descripcion": "Compras del supermercado",
-  "fecha": "2025-12-15"
-}
-```
-
-**Respuesta:**
-```json
-{
-  "status": "success",
-  "mensaje": "Gasto creado correctamente",
-  "gasto_id": "abc123def456",
-  "path_usado": "users/abc123xyz/gastos/abc123def456"
-}
-```
-
----
-
-### 📈 Predicciones (requieren token + expenses)
-
-**Headers comunes para todos:**
-- `Authorization: Bearer <tu_token>`
-- `Content-Type: application/json`
-
-**Body JSON común:**
+Body común (si no usas Firebase implícito):
 ```json
 {
   "expenses": [
     {"fecha": "2025-11-01", "monto": 50, "categoria": "Comida"},
-    {"fecha": "2025-11-02", "monto": 30, "categoria": "Transporte"},
-    {"fecha": "2025-11-03", "monto": 100, "categoria": "Comida"},
-    {"fecha": "2025-11-05", "monto": 25, "categoria": "Transporte"},
-    {"fecha": "2025-11-10", "monto": 80, "categoria": "Entretenimiento"},
-    {"fecha": "2025-11-15", "monto": 200, "categoria": "Comida"},
-    {"fecha": "2025-11-20", "monto": 45, "categoria": "Transporte"}
+    {"fecha": "2025-11-02", "monto": 30, "categoria": "Transporte"}
   ]
 }
 ```
 
-#### 11. Predicción por categoría
-```
-POST /api/v2/predict-category
-```
+- Predicción por categoría: `POST /api/v2/predict-category`
+- Predicción mensual: `POST /api/v2/predict-monthly`
+- Detección de anomalías: `POST /api/v2/detect-anomalies`
+- Comparación de modelos: `POST /api/v2/compare-models`
+- Estacionalidad: `POST /api/v2/seasonality`
+- Análisis completo (predicción): `POST /api/v2/analysis-complete`
 
-#### 12. Predicción mensual
-```
-POST /api/v2/predict-monthly
-```
+### Análisis estadístico
 
-#### 13. Detección de anomalías
-```
-POST /api/v2/detect-anomalies
-```
+- Correlaciones: `POST /api/v2/stat/correlations`
+- Mes actual vs anterior: `POST /api/v2/stat/temporal-comparison`
+- Clustering: `POST /api/v2/stat/clustering`
+- Tendencias: `POST /api/v2/stat/trends`
+- Outliers (IQR + Z-Score): `POST /api/v2/stat/outliers`
+- Análisis estadístico completo: `POST /api/v2/stat/complete`
 
-#### 14. Comparación de modelos
-```
-POST /api/v2/compare-models
-```
+### Ahorro y salud financiera
 
-#### 15. Análisis de estacionalidad
-```
-POST /api/v2/seasonality
-```
+- Metas de ahorro: `POST /api/v2/savings/goals`
+- Tips personalizados: `POST /api/v2/savings/tips`
+- Alertas de presupuesto: `POST /api/v2/savings/budget-alerts`
+- Puntuación financiera: `POST /api/v2/savings/health-score`
+- Reporte semanal: `POST /api/v2/savings/weekly-report`
+- Análisis de ahorro completo: `POST /api/v2/savings/complete`
 
-#### 16. Análisis completo
-```
-POST /api/v2/analysis-complete
-```
+### Gráficos
 
----
-
-### 📊 Análisis Estadístico (requieren token + expenses)
-
-**Headers:** `Authorization: Bearer <tu_token>`, `Content-Type: application/json`
-
-**Body JSON:** (mismo formato de expenses que arriba)
-
-#### 17. Correlaciones
-```
-POST /api/v2/stat/correlations
-```
-
-#### 18. Comparación temporal
-```
-POST /api/v2/stat/temporal-comparison
-```
-
-#### 19. Clustering (agrupamiento)
-```
-POST /api/v2/stat/clustering
-```
-
-#### 20. Tendencias
-```
-POST /api/v2/stat/trends
-```
-
-#### 21. Detección de outliers
-```
-POST /api/v2/stat/outliers
-```
-
-#### 22. Análisis estadístico completo
-```
-POST /api/v2/stat/complete
-```
+- Heatmap: `POST /api/v2/charts/heatmap`
+- Sankey: `POST /api/v2/charts/sankey`
+- Dashboard: `POST /api/v2/charts/dashboard`
+- Comparación meses: `POST /api/v2/charts/comparison`
+- Exportar gráficos: `POST /api/v2/charts/export` (campo `format`: `json` o `base64`)
+- Paquete completo de gráficos: `POST /api/v2/charts/complete`
 
 ---
 
-### 💰 Recomendaciones de Ahorro (requieren token + expenses)
+## 🔑 Resumen rápido de autenticación
 
-**Headers:** `Authorization: Bearer <tu_token>`, `Content-Type: application/json`
-
-**Body JSON:** (mismo formato de expenses)
-
-#### 23. Metas de ahorro
-```
-POST /api/v2/savings/goals
-```
-**Body adicional opcional:**
-```json
-{
-  "expenses": [...],
-  "savings_goal": 500,
-  "monthly_income": 3000
-}
-```
-
-#### 24. Tips personalizados
-```
-POST /api/v2/savings/tips
-```
-
-#### 25. Alertas de presupuesto
-```
-POST /api/v2/savings/budget-alerts
-```
-**Body adicional opcional:**
-```json
-{
-  "expenses": [...],
-  "budget_limits": {
-    "Comida": 300,
-    "Transporte": 150,
-    "Entretenimiento": 100
-  }
-}
-```
-
-#### 26. Puntuación de salud financiera
-```
-POST /api/v2/savings/health-score
-```
-
-#### 27. Reporte semanal
-```
-POST /api/v2/savings/weekly-report
-```
-
-#### 28. Análisis de ahorro completo
-```
-POST /api/v2/savings/complete
-```
+| Ruta | Requiere token |
+|------|-----------------|
+| `/api/v2/auth/token` | No |
+| `/api/v2/auth/validate` | Sí (en header) |
+| `/api/v2/health` | No |
+| `/api/v2/firebase/debug` | No |
+| `/api/v2/firebase/usuarios` | No |
+| `/api/v2/firebase/usuarios/{id}` | No |
+| `/api/v2/firebase/users/{id}/gastos` (GET) | No |
+| `/api/v2/firebase/users/{id}/gastos` (POST) | Sí |
+| `/api/v2/firebase/users/{id}/gastos-ids` | No |
+| `/api/v2/firebase/users/{id}/gastos-procesados` | Sí |
+| Resto de `/firebase/users/*` | Sí |
+| Todos `/predict-*`, `/stat/*`, `/savings/*`, `/charts/*` | Sí |
 
 ---
 
-### 📉 Gráficos (requieren token + expenses)
-
-**Headers:** `Authorization: Bearer <tu_token>`, `Content-Type: application/json`
-
-**Body JSON:** (mismo formato de expenses)
-
-#### 29. Mapa de calor
-```
-POST /api/v2/charts/heatmap
-```
-
-#### 30. Diagrama Sankey
-```
-POST /api/v2/charts/sankey
-```
-
-#### 31. Dashboard completo
-```
-POST /api/v2/charts/dashboard
-```
-
-#### 32. Gráficos comparativos
-```
-POST /api/v2/charts/comparison
-```
-
-#### 33. Exportar gráficos
-```
-POST /api/v2/charts/export
-```
-**Body adicional:**
-```json
-{
-  "expenses": [...],
-  "format": "png"
-}
-```
-
-#### 34. Todos los gráficos
-```
-POST /api/v2/charts/complete
-```
-
----
-
-## 🔑 Resumen de Autenticación
-
-| Endpoint | Token JWT | Body JSON |
-|----------|-----------|-----------|
-| `/auth/token` | ❌ No | `{"user_id": "..."}` |
-| `/auth/validate` | ✅ Header | *(vacío)* |
-| `/health` | ❌ No | *(no aplica)* |
-| `/firebase/debug` | ❌ No | *(no aplica)* |
-| `/firebase/usuarios` | ❌ No | *(no aplica)* |
-| `/firebase/usuarios/{id}` | ❌ No | *(no aplica)* |
-| `/firebase/users/{id}/gastos` GET | ❌ No | *(no aplica)* |
-| `/firebase/users/{id}/gastos` POST | ✅ Header | `{"cantidad":..., "categoria":...}` |
-| `/firebase/users/{id}/gastos-procesados` | ✅ Header | *(no aplica)* |
-| Todos `/predict-*`, `/stat/*`, `/savings/*`, `/charts/*` | ✅ Header | `{"expenses": [...]}` |
-
----
-
-## 📝 Ejemplo completo en Python
+## 📝 Ejemplo rápido (Python)
 
 ```python
 import requests
 
 BASE_URL = 'http://localhost:5000'
 
-# 1. Obtener token
-response = requests.post(f'{BASE_URL}/api/v2/auth/token', 
-  json={'user_id': 'usuario1'})
-token = response.json()['token']
-headers = {'Authorization': f'Bearer {token}'}
+# 1) Token
+tok = requests.post(f'{BASE_URL}/api/v2/auth/token', json={'user_id': 'usuario1'}).json()['token']
+headers = {'Authorization': f'Bearer {tok}'}
 
-# 2. Crear un gasto en Firebase
-gasto = {
-  'cantidad': 75.50,
-  'categoria': 'Restaurante',
-  'descripcion': 'Cena con amigos'
-}
-response = requests.post(
-  f'{BASE_URL}/api/v2/firebase/users/usuario1/gastos',
-  json=gasto, 
-  headers=headers
-)
-print(response.json())
+# 2) Crear gasto
+payload = { 'cantidad': 75.5, 'categoria': 'Restaurante', 'descripcion': 'Cena' }
+r1 = requests.post(f'{BASE_URL}/api/v2/firebase/users/usuario1/gastos', json=payload, headers=headers)
 
-# 3. Obtener gastos
-response = requests.get(
-  f'{BASE_URL}/api/v2/firebase/users/usuario1/gastos'
-)
-print(response.json())
-
-# 4. Hacer predicción con datos
-data = {
-  'expenses': [
-    {'fecha': '2025-12-01', 'monto': 50, 'categoria': 'Comida'},
-    {'fecha': '2025-12-02', 'monto': 30, 'categoria': 'Transporte'},
-    {'fecha': '2025-12-03', 'monto': 100, 'categoria': 'Comida'}
-  ]
-}
-response = requests.post(
-  f'{BASE_URL}/api/v2/predict-category',
-  json=data, 
-  headers=headers
-)
-print(response.json())
+# 3) Asesor financiero
+r2 = requests.get(f'{BASE_URL}/api/v2/firebase/users/usuario1/asesor-financiero', headers=headers)
+print(r1.json())
+print(r2.json())
 ```
 
 ---
