@@ -127,53 +127,43 @@ Todos los endpoints de usuario están conectados a la ruta base `/api/v2/firebas
 
 ## 📈 Endpoints de IA generales
 
-Estos endpoints también pueden usar datos de Firebase automáticamente si no envías `expenses` y tu token incluye `user_id`. Alternativamente, puedes enviar `expenses` en el body.
+Para evitar errores 405 y ser explícitos por usuario, usa las rutas bajo `/api/v2/firebase/users/{usuario_id}` para TODOS los módulos de IA. Todas requieren token.
 
-Headers comunes: `Authorization: Bearer <token>`, `Content-Type: application/json`
+### Predicción
 
-Body común (si no usas Firebase implícito):
-```json
-{
-  "expenses": [
-    {"fecha": "2025-11-01", "monto": 50, "categoria": "Comida"},
-    {"fecha": "2025-11-02", "monto": 30, "categoria": "Transporte"}
-  ]
-}
-```
-
-- Predicción por categoría: `POST /api/v2/predict-category`
-- Predicción mensual: `POST /api/v2/predict-monthly`
-- Detección de anomalías: `POST /api/v2/detect-anomalies`
-- Comparación de modelos: `POST /api/v2/compare-models`
-- Estacionalidad: `POST /api/v2/seasonality`
-- Análisis completo (predicción): `POST /api/v2/analysis-complete`
+- `GET /api/v2/firebase/users/{usuario_id}/predict-category`
+- `GET /api/v2/firebase/users/{usuario_id}/predict-monthly`
+- `GET /api/v2/firebase/users/{usuario_id}/detect-anomalies`
+- `GET /api/v2/firebase/users/{usuario_id}/compare-models`
+- `GET /api/v2/firebase/users/{usuario_id}/seasonality`
+- `GET /api/v2/firebase/users/{usuario_id}/analysis-complete`
 
 ### Análisis estadístico
 
-- Correlaciones: `POST /api/v2/stat/correlations`
-- Mes actual vs anterior: `POST /api/v2/stat/temporal-comparison`
-- Clustering: `POST /api/v2/stat/clustering`
-- Tendencias: `POST /api/v2/stat/trends`
-- Outliers (IQR + Z-Score): `POST /api/v2/stat/outliers`
-- Análisis estadístico completo: `POST /api/v2/stat/complete`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/correlations`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/clustering?n_clusters=3`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/trends`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/outliers`
+- `GET /api/v2/firebase/users/{usuario_id}/stat/complete`
 
 ### Ahorro y salud financiera
 
-- Metas de ahorro: `POST /api/v2/savings/goals`
-- Tips personalizados: `POST /api/v2/savings/tips`
-- Alertas de presupuesto: `POST /api/v2/savings/budget-alerts`
-- Puntuación financiera: `POST /api/v2/savings/health-score`
-- Reporte semanal: `POST /api/v2/savings/weekly-report`
-- Análisis de ahorro completo: `POST /api/v2/savings/complete`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/goals?goal_name=Viaje&target_amount=2500&months=6`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/tips`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/budget-alerts?monthly_budget=3000`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/health-score?monthly_budget=3000`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/weekly-report`
+- `GET /api/v2/firebase/users/{usuario_id}/savings/complete?goal_name=Viaje&target_amount=2500&months=6&monthly_budget=3000`
 
 ### Gráficos
 
-- Heatmap: `POST /api/v2/charts/heatmap`
-- Sankey: `POST /api/v2/charts/sankey`
-- Dashboard: `POST /api/v2/charts/dashboard`
-- Comparación meses: `POST /api/v2/charts/comparison`
-- Exportar gráficos: `POST /api/v2/charts/export` (campo `format`: `json` o `base64`)
-- Paquete completo de gráficos: `POST /api/v2/charts/complete`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/heatmap`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/sankey`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/dashboard`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/comparison`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/export?format=json`
+- `GET /api/v2/firebase/users/{usuario_id}/charts/complete`
 
 ---
 
