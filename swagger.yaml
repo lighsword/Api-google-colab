@@ -690,34 +690,105 @@ servers:
                   monthly_budget: { type: number }
         responses:
           '200': { description: OK }
-    /charts/{name}:
+    /charts/heatmap:
       get:
-        summary: Gráficos y exportaciones
+        summary: Calendario de calor
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        responses:
+          '200': { description: OK }
+      post:
+        summary: Calendario de calor
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses: { type: array }
+        responses:
+          '200': { description: OK }
+    /charts/sankey:
+      get:
+        summary: Diagrama Sankey
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        responses:
+          '200': { description: OK }
+      post:
+        summary: Diagrama Sankey
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses: { type: array }
+        responses:
+          '200': { description: OK }
+    /charts/dashboard:
+      get:
+        summary: Dashboard interactivo
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        responses:
+          '200': { description: OK }
+      post:
+        summary: Dashboard interactivo
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses: { type: array }
+        responses:
+          '200': { description: OK }
+    /charts/comparison:
+      get:
+        summary: Comparativas mes vs mes
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        responses:
+          '200': { description: OK }
+      post:
+        summary: Comparativas mes vs mes
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses: { type: array }
+        responses:
+          '200': { description: OK }
+    /charts/export:
+      get:
+        summary: Exportar gráficos
         tags: [Charts]
         security: [ { bearerAuth: [] } ]
         parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [heatmap, sankey, dashboard, comparison, export, complete]
           - in: query
             name: format
             schema: { type: string, enum: [json, base64], default: json }
         responses:
           '200': { description: OK }
       post:
-        summary: Gráficos y exportaciones
+        summary: Exportar gráficos
         tags: [Charts]
         security: [ { bearerAuth: [] } ]
-        parameters:
-          - in: path
-            name: name
-            required: true
-            schema:
-              type: string
-              enum: [heatmap, sankey, dashboard, comparison, export, complete]
         requestBody:
           required: false
           content:
@@ -727,6 +798,27 @@ servers:
                 properties:
                   expenses: { type: array }
                   format: { type: string }
+        responses:
+          '200': { description: OK }
+    /charts/complete:
+      get:
+        summary: Todos los gráficos
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        responses:
+          '200': { description: OK }
+      post:
+        summary: Todos los gráficos
+        tags: [Charts]
+        security: [ { bearerAuth: [] } ]
+        requestBody:
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  expenses: { type: array }
         responses:
           '200': { description: OK }
   components:

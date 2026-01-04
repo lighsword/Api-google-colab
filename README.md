@@ -849,11 +849,111 @@ post:
     '200': { description: OK }
 ```
 
-- charts/*: GET/POST /api/v2/charts/(heatmap|sankey|dashboard|comparison|export|complete)
+- charts heatmap: GET/POST /api/v2/charts/heatmap
 
 ```yaml
 get:
-  summary: Gráficos y exportaciones
+  summary: Calendario de calor
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Calendario de calor
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- charts sankey: GET/POST /api/v2/charts/sankey
+
+```yaml
+get:
+  summary: Diagrama Sankey
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Diagrama Sankey
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- charts dashboard: GET/POST /api/v2/charts/dashboard
+
+```yaml
+get:
+  summary: Dashboard interactivo
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Dashboard interactivo
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- charts comparison: GET/POST /api/v2/charts/comparison
+
+```yaml
+get:
+  summary: Comparativas mes vs mes
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Comparativas mes vs mes
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
+  responses:
+    '200': { description: OK }
+```
+
+- charts export: GET/POST /api/v2/charts/export
+
+```yaml
+get:
+  summary: Exportar gráficos
   tags: [Charts]
   security: [ { bearerAuth: [] } ]
   parameters:
@@ -863,7 +963,7 @@ get:
   responses:
     '200': { description: OK }
 post:
-  summary: Gráficos y exportaciones
+  summary: Exportar gráficos
   tags: [Charts]
   security: [ { bearerAuth: [] } ]
   requestBody:
@@ -875,6 +975,31 @@ post:
           properties:
             expenses: { type: array }
             format: { type: string }
+  responses:
+    '200': { description: OK }
+```
+
+- charts complete: GET/POST /api/v2/charts/complete
+
+```yaml
+get:
+  summary: Todos los gráficos
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  responses:
+    '200': { description: OK }
+post:
+  summary: Todos los gráficos
+  tags: [Charts]
+  security: [ { bearerAuth: [] } ]
+  requestBody:
+    required: false
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            expenses: { type: array }
   responses:
     '200': { description: OK }
 ```
