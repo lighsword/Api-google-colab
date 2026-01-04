@@ -503,3 +503,751 @@ paths:
       responses:
         '200':
           description: OK
+
+  # ============================================================
+  # Endpoints generales (base /api/v2) con body o Firebase
+  # ============================================================
+
+  # --- Predicciones ---
+  /api/v2/predict-category:
+    get:
+      summary: Predicción por categoría (30 días)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Predicción por categoría (30 días)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/predict-monthly:
+    get:
+      summary: Predicción mensual (30 días)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Predicción mensual (30 días)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/detect-anomalies:
+    get:
+      summary: Detección de anomalías
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Detección de anomalías
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/compare-models:
+    get:
+      summary: Comparación de modelos ML
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Comparación de modelos ML
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/seasonality:
+    get:
+      summary: Análisis de estacionalidad
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Análisis de estacionalidad
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/analysis-complete:
+    get:
+      summary: Análisis completo (predicciones)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Análisis completo (predicciones)
+      tags: [Predictions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  # --- Estadística ---
+  /api/v2/stat/correlations:
+    get:
+      summary: Correlaciones entre categorías
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Correlaciones entre categorías
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/stat/temporal-comparison:
+    get:
+      summary: Mes actual vs anterior
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Mes actual vs anterior
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/stat/clustering:
+    get:
+      summary: Clustering de gastos
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: n_clusters
+          schema:
+            type: integer
+            default: 3
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Clustering de gastos
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                n_clusters:
+                  type: integer
+                  default: 3
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/stat/trends:
+    get:
+      summary: Detección de tendencias
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Detección de tendencias
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/stat/outliers:
+    get:
+      summary: Outliers (IQR + Z-Score)
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Outliers (IQR + Z-Score)
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/stat/complete:
+    get:
+      summary: Estadístico completo
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Estadístico completo
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  # --- Ahorro ---
+  /api/v2/savings/goals:
+    get:
+      summary: Metas de ahorro
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: goal_name
+          schema:
+            type: string
+        - in: query
+          name: target_amount
+          schema:
+            type: number
+            default: 1000
+        - in: query
+          name: months
+          schema:
+            type: integer
+            default: 12
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Metas de ahorro
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                goal_name:
+                  type: string
+                target_amount:
+                  type: number
+                  default: 1000
+                months:
+                  type: integer
+                  default: 12
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/savings/tips:
+    get:
+      summary: Tips personalizados
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Tips personalizados
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/savings/budget-alerts:
+    get:
+      summary: Alertas de presupuesto
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: monthly_budget
+          schema:
+            type: number
+            default: 3000
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Alertas de presupuesto
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                monthly_budget:
+                  type: number
+                  default: 3000
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/savings/health-score:
+    get:
+      summary: Puntuación financiera
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: monthly_budget
+          schema:
+            type: number
+            default: 3000
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Puntuación financiera
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                monthly_budget:
+                  type: number
+                  default: 3000
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/savings/weekly-report:
+    get:
+      summary: Reporte semanal
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Reporte semanal
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/savings/complete:
+    get:
+      summary: Ahorro completo (todos módulos)
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: goal_name
+          schema:
+            type: string
+        - in: query
+          name: target_amount
+          schema:
+            type: number
+            default: 5000
+        - in: query
+          name: months
+          schema:
+            type: integer
+            default: 12
+        - in: query
+          name: monthly_budget
+          schema:
+            type: number
+            default: 3000
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Ahorro completo (todos módulos)
+      tags: [Savings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                goal_name:
+                  type: string
+                target_amount:
+                  type: number
+                  default: 5000
+                months:
+                  type: integer
+                  default: 12
+                monthly_budget:
+                  type: number
+                  default: 3000
+      responses:
+        '200':
+          description: OK
+
+  # --- Gráficos ---
+  /api/v2/charts/heatmap:
+    get:
+      summary: Calendario de calor
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Calendario de calor
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/charts/sankey:
+    get:
+      summary: Diagrama Sankey
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Diagrama Sankey
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/charts/dashboard:
+    get:
+      summary: Dashboard interactivo
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Dashboard interactivo
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/charts/comparison:
+    get:
+      summary: Comparativas mes vs mes
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Comparativas mes vs mes
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/charts/export:
+    get:
+      summary: Exportar gráficos
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [json, base64]
+            default: json
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Exportar gráficos
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                format:
+                  type: string
+                  enum: [json, base64]
+                  default: json
+      responses:
+        '200':
+          description: OK
+
+  /api/v2/charts/complete:
+    get:
+      summary: Todos los gráficos
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Todos los gráficos
+      tags: [Charts]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expenses:
+                  type: array
+      responses:
+        '200':
+          description: OK
