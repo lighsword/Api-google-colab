@@ -153,13 +153,27 @@ app.config['SECRET_KEY'] = SECRET_KEY
 # ============================================================
 # 🔐 CONFIGURACIÓN DE CORS
 # ============================================================
-# Permitir CORS desde cualquier origen y puerto
-CORS(app, 
-     origins="*",  # Permitir todos los orígenes
-     allow_headers=['Content-Type', 'Authorization', 'X-API-Key'],
-     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-     supports_credentials=True,
-     max_age=3600)
+# Dominios de Firebase permitidos
+FIREBASE_DOMAINS = [
+    r"https?://.*\.firebaseapp\.com",          # Firebase Hosting
+    r"https?://.*\.web\.app",                   # Firebase Web App
+    r"https?://.*\.firebase\.google\.com",      # Firebase Console
+    r"https?://.*\.firebaseui\.net",            # Firebase UI
+    "http://localhost:*",                       # Desarrollo local
+    "http://127.0.0.1:*",                       # Desarrollo local
+]
+
+# Configurar CORS con orígenes específicos de Firebase + desarrollo
+CORS(app,
+     resources={r"/api/*": {
+         "origins": ["*"],  # Permitir todos para API
+         "allow_headers": ['Content-Type', 'Authorization', 'X-API-Key', 'Accept'],
+         "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+         "supports_credentials": True,
+         "max_age": 3600,
+         "expose_headers": ['Content-Type', 'X-Total-Count']
+     }},
+     origins="*")  # Fallback para otros endpoints
 
 # Configuración de Swagger UI
 try:
