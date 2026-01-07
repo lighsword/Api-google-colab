@@ -34,6 +34,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, g, send_from_directory, Response
+from flask_cors import CORS
 from werkzeug.exceptions import BadRequest
 from firebase_admin import auth as firebase_auth
 from functools import wraps
@@ -148,6 +149,17 @@ TOKEN_EXPIRATION_HOURS = 24
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = SECRET_KEY
+
+# ============================================================
+# 🔐 CONFIGURACIÓN DE CORS
+# ============================================================
+# Permitir CORS desde cualquier origen y puerto
+CORS(app, 
+     origins="*",  # Permitir todos los orígenes
+     allow_headers=['Content-Type', 'Authorization', 'X-API-Key'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     supports_credentials=True,
+     max_age=3600)
 
 # Configuración de Swagger UI
 try:
