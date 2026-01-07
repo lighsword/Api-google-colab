@@ -46,10 +46,10 @@ info:
     - `X-API-Key: {token}`
 
 servers:
-  - url: https://tu-api.onrender.com
-    description: Servidor de producción
   - url: http://localhost:5000
     description: Servidor de desarrollo local
+  - url: https://tu-api.onrender.com
+    description: Servidor de producción
 
 components:
   securitySchemes:
