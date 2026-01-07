@@ -179,7 +179,19 @@ try:
     swaggerui_blueprint = get_swaggerui_blueprint(
         SWAGGER_URL,
         API_URL,
-        config={'app_name': "Gestor Financiero IA API"}
+        config={
+            'app_name': "Gestor Financiero IA API",
+            'supportedSubmitMethods': ['get', 'post', 'put', 'delete', 'patch'],
+            'validatorUrl': None,  # Deshabilitar validador externo
+            'displayRequestDuration': True,
+            'defaultModelsExpandDepth': 1,
+            'defaultModelExpandDepth': 1,
+            'docExpansion': 'list',
+            'filter': True,
+            'showExtensions': True,
+            'showCommonExtensions': True,
+            'tryItOutEnabled': True
+        }
     )
     app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
     print("✅ Swagger UI disponible en /docs")
@@ -1913,18 +1925,36 @@ def validate_token_endpoint():
 # 📊 ENDPOINTS DE LA API
 # ============================================================
 
-@app.route('/api/v2/swagger.yaml', methods=['GET'])
+@app.route('/api/v2/swagger.yaml', methods=['GET', 'OPTIONS'])
 def swagger_spec():
     """
-    Servir especificación OpenAPI.
+    Servir especificación OpenAPI con headers CORS correctos.
     """
+    if request.method == 'OPTIONS':
+        # Respuesta preflight CORS
+        response = Response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        return response
+    
     import os
     try:
         swagger_path = os.path.join(os.path.dirname(__file__), 'swagger.yaml')
         with open(swagger_path, 'r', encoding='utf-8') as f:
-            return Response(f.read(), mimetype='text/yaml')
+            content = f.read()
+        response = Response(content, mimetype='text/yaml')
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
     except Exception as e:
         return jsonify({'error': f'No se pudo cargar swagger.yaml: {str(e)}'}), 404
+
+@app.route('/', methods=['GET'])
+def index():
+    """Redirigir a la documentación de Swagger"""
+    from flask import redirect
+    return redirect('/docs')
 
 @app.route('/api/v2/health', methods=['GET'])
 def health():
@@ -1937,7 +1967,9 @@ def health():
             'arima': ARIMA_AVAILABLE,
             'prophet': PROPHET_AVAILABLE,
             'lstm': LSTM_AVAILABLE
-        }
+        },
+        'swagger_ui': '/docs',
+        'swagger_yaml': '/api/v2/swagger.yaml'
     }), 200
 
 

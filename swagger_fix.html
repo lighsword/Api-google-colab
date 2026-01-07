@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Solución Error Swagger</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 { color: #333; margin-bottom: 10px; font-size: 32px; }
+        h2 { color: #667eea; margin: 30px 0 15px; font-size: 20px; border-left: 4px solid #667eea; padding-left: 15px; }
+        p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+        .error-box {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .solution-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #0c5460;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #e83e8c;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .steps {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .steps ol { padding-left: 20px; }
+        .steps li { margin: 10px 0; color: #333; line-height: 1.6; }
+        .button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s;
+        }
+        .button:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.3); }
+        .button.secondary { background: #6c757d; }
+        .button.secondary:hover { background: #5a6268; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Error "Failed to Fetch" en Swagger</h1>
+        <p style="color: #999; font-size: 14px;">Solución completa paso a paso</p>
+
+        <div class="error-box">
+            <h3 style="color: #721c24; margin-bottom: 10px;">❌ El Problema</h3>
+            <p style="color: #721c24; margin: 0;">
+                Swagger UI muestra: <strong>"Failed to fetch. Possible Reasons: CORS, Network Failure"</strong>
+            </p>
+        </div>
+
+        <h2>🎯 Causas del Error</h2>
+        <div class="info-box">
+            <ol style="margin: 0; padding-left: 20px;">
+                <li>La API no está corriendo en localhost:5000</li>
+                <li>Headers CORS no están configurados correctamente</li>
+                <li>Swagger está intentando conectar a una URL incorrecta</li>
+                <li>El navegador bloqueó la solicitud</li>
+            </ol>
+        </div>
+
+        <h2>✅ Solución Paso a Paso</h2>
+
+        <div class="steps">
+            <h3 style="margin-bottom: 15px;">Paso 1: Verificar que la API está corriendo</h3>
+            <p>Abre PowerShell y ejecuta:</p>
+            <pre>cd "D:\Projects\Api google colab"
+.venv\Scripts\python.exe API_MEJORADA.py</pre>
+            <p>Deberías ver:</p>
+            <pre>✅ Servidor corriendo en: http://0.0.0.0:5000
+Running on http://127.0.0.1:5000</pre>
+        </div>
+
+        <div class="steps">
+            <h3 style="margin-bottom: 15px;">Paso 2: Verificar Health Check</h3>
+            <p>Abre en tu navegador:</p>
+            <a href="http://localhost:5000/api/v2/health" class="button" target="_blank">
+                Verificar Health Check
+            </a>
+            <p style="margin-top: 10px;">Deberías ver un JSON con <code>"status": "ok"</code></p>
+        </div>
+
+        <div class="steps">
+            <h3 style="margin-bottom: 15px;">Paso 3: Reiniciar la API con Cambios</h3>
+            <ol>
+                <li>En PowerShell, presiona <code>Ctrl+C</code> para detener la API</li>
+                <li>Ejecuta nuevamente: <code>.venv\Scripts\python.exe API_MEJORADA.py</code></li>
+                <li>Espera a que veas el mensaje de inicio</li>
+            </ol>
+        </div>
+
+        <div class="steps">
+            <h3 style="margin-bottom: 15px;">Paso 4: Limpiar Caché del Navegador</h3>
+            <ol>
+                <li>Abre DevTools: <code>F12</code> o <code>Ctrl+Shift+I</code></li>
+                <li>Ve a la pestaña <strong>Network</strong></li>
+                <li>Haz clic derecho en cualquier lugar → <strong>"Clear browser cache"</strong></li>
+                <li>O usa: <code>Ctrl+Shift+Del</code> → Borrar caché e imágenes</li>
+            </ol>
+        </div>
+
+        <div class="steps">
+            <h3 style="margin-bottom: 15px;">Paso 5: Recargar Swagger</h3>
+            <ol>
+                <li>Cierra la pestaña de Swagger</li>
+                <li>Abre una nueva pestaña</li>
+                <li>Ve a: <a href="http://localhost:5000/docs" target="_blank">http://localhost:5000/docs</a></li>
+                <li>Espera a que cargue completamente</li>
+            </ol>
+        </div>
+
+        <h2>🧪 Probar un Endpoint</h2>
+        <div class="solution-box">
+            <h3 style="color: #155724; margin-bottom: 15px;">Test Manual desde Consola</h3>
+            <p style="color: #155724;">Abre DevTools (F12) y pega en la consola:</p>
+            <pre style="background: #155724; color: #d4edda;">fetch('http://localhost:5000/api/v2/auth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ user_id: 'test' })
+})
+.then(r => r.json())
+.then(console.log)
+.catch(console.error);</pre>
+            <p style="color: #155724; margin: 10px 0 0 0;">
+                ✅ Si funciona, verás el token en la consola<br>
+                ❌ Si falla, revisa que la API esté corriendo
+            </p>
+        </div>
+
+        <h2>🔍 Verificar CORS en DevTools</h2>
+        <div class="steps">
+            <ol>
+                <li>Abre Swagger: <a href="http://localhost:5000/docs" target="_blank">http://localhost:5000/docs</a></li>
+                <li>Abre DevTools (F12) → pestaña <strong>Network</strong></li>
+                <li>Intenta ejecutar un endpoint en Swagger</li>
+                <li>Busca la solicitud en Network → Click en ella</li>
+                <li>Ve a la pestaña <strong>Headers</strong></li>
+                <li>Verifica que existan estos headers en <strong>Response Headers</strong>:</li>
+            </ol>
+            <pre>Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD
+Access-Control-Allow-Headers: Content-Type, Authorization, X-API-Key, Accept, Origin</pre>
+        </div>
+
+        <h2>🚀 Acciones Rápidas</h2>
+        <div style="margin: 20px 0;">
+            <a href="http://localhost:5000/docs" class="button" target="_blank">
+                Abrir Swagger
+            </a>
+            <a href="http://localhost:5000/api/v2/health" class="button secondary" target="_blank">
+                Health Check
+            </a>
+            <a href="http://localhost:5000/" class="button secondary" target="_blank">
+                Inicio (Redirige a Swagger)
+            </a>
+        </div>
+
+        <h2>📝 Si Aún No Funciona</h2>
+        <div class="info-box">
+            <p style="color: #0c5460; margin: 0;">
+                <strong>Usa Postman o cURL</strong> en lugar de Swagger temporalmente:
+            </p>
+            <pre style="margin-top: 15px;">curl -X POST http://localhost:5000/api/v2/auth/token \
+  -H "Content-Type: application/json" \
+  -d "{\"user_id\":\"test\"}"</pre>
+            <p style="color: #0c5460; margin: 10px 0 0 0;">
+                Postman es más confiable para desarrollo local y no tiene problemas de CORS.
+            </p>
+        </div>
+
+        <h2>✨ Mejoras Aplicadas al Código</h2>
+        <div class="solution-box" style="margin-bottom: 40px;">
+            <p style="color: #155724;">Se actualizó tu <code>API_MEJORADA.py</code> con:</p>
+            <ol style="margin: 10px 0; padding-left: 20px; color: #155724;">
+                <li>Configuración mejorada de CORS para Swagger</li>
+                <li>Headers CORS explícitos en swagger.yaml endpoint</li>
+                <li>Soporte para solicitudes OPTIONS (preflight)</li>
+                <li>Redireccionamiento automático de / a /docs</li>
+                <li>Health check mejorado con más información</li>
+                <li>Configuración completa de Swagger UI</li>
+            </ol>
+            <p style="color: #155724; margin: 10px 0 0 0;">
+                <strong>Reinicia la API</strong> para aplicar los cambios.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
