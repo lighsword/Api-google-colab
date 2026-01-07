@@ -1909,9 +1909,26 @@ def get_token():
 def validate_token_endpoint():
     """Valida si un token es aún válido"""
     try:
-        token = request.headers.get('X-API-Key') or request.headers.get('Authorization', '').split()[-1]
+        token = None
+        
+        # Intentar obtener token de X-API-Key
+        token = request.headers.get('X-API-Key')
+        
+        # Si no está en X-API-Key, intentar desde Authorization
         if not token:
-            return jsonify({'valid': False, 'message': 'Token no proporcionado'}), 400
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header:
+                parts = auth_header.split()
+                if len(parts) == 2 and parts[0].lower() == 'bearer':
+                    token = parts[1]
+                elif len(parts) == 1:
+                    token = parts[0]
+        
+        if not token:
+            return jsonify({
+                'valid': False, 
+                'message': 'Token no proporcionado. Usa header "Authorization: Bearer <token>" o "X-API-Key: <token>"'
+            }), 400
         
         is_valid = bool(verify_token(token))
         return jsonify({
