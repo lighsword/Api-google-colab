@@ -1154,3 +1154,61 @@ paths:
       responses:
         '200':
           description: Puntuación calculada
+
+  /api/v2/firebase/users/{usuario_id}/gastos-procesados:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener gastos procesados
+      description: |
+        Obtiene gastos procesados y transformados para análisis.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/gastos-procesados`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gastos procesados obtenidos
+
+  /api/v2/firebase/users/{usuario_id}/gastos-ids:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener IDs de gastos
+      description: |
+        Obtiene solo los IDs de los gastos del usuario.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/users/{usuario_id}/gastos-ids`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: IDs de gastos obtenidos
+
+  /api/v2/firebase/debug:
+    get:
+      tags:
+        - 🔧 Debug & Utilidades
+      summary: Debug de Firebase
+      description: |
+        Endpoint para debuguear la conexión con Firebase.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/firebase/debug`
+        
+        **🔑 Requiere:** Token de autenticación (opcional para debug)
+      security: []
+      responses:
+        '200':
+          description: Información de debug
