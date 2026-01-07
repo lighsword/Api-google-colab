@@ -153,27 +153,23 @@ app.config['SECRET_KEY'] = SECRET_KEY
 # ============================================================
 # 🔐 CONFIGURACIÓN DE CORS
 # ============================================================
-# Dominios de Firebase permitidos
-FIREBASE_DOMAINS = [
-    r"https?://.*\.firebaseapp\.com",          # Firebase Hosting
-    r"https?://.*\.web\.app",                   # Firebase Web App
-    r"https?://.*\.firebase\.google\.com",      # Firebase Console
-    r"https?://.*\.firebaseui\.net",            # Firebase UI
-    "http://localhost:*",                       # Desarrollo local
-    "http://127.0.0.1:*",                       # Desarrollo local
-]
-
-# Configurar CORS con orígenes específicos de Firebase + desarrollo
+# Configurar CORS para permitir solicitudes desde cualquier origen
 CORS(app,
-     resources={r"/api/*": {
-         "origins": ["*"],  # Permitir todos para API
-         "allow_headers": ['Content-Type', 'Authorization', 'X-API-Key', 'Accept'],
-         "methods": ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-         "supports_credentials": True,
-         "max_age": 3600,
-         "expose_headers": ['Content-Type', 'X-Total-Count']
-     }},
-     origins="*")  # Fallback para otros endpoints
+     origins="*",
+     allow_headers=['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'Origin'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
+     supports_credentials=False,
+     max_age=86400)
+
+# Middleware para asegurar headers CORS en cada respuesta
+@app.after_request
+def after_request(response):
+    """Agregar headers CORS a cada respuesta"""
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-API-Key, Accept, Origin'
+    response.headers['Access-Control-Max-Age'] = '86400'
+    return response
 
 # Configuración de Swagger UI
 try:
