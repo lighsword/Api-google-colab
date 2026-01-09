@@ -591,10 +591,9 @@ Cuando envíes un array de gastos manualmente, asegúrate de:
 ## 🚀 Flujo de Trabajo Recomendado
 
 1. **Obtener token** → `POST /api/v2/auth/token`
-2. **Verificar conexión** → `GET /api/v2/health`
-3. **Crear/obtener gastos** → `POST /api/v2/firebase/users/{id}/gastos`
-4. **Análisis completo** → `GET /api/v2/firebase/users/{id}/asesor-financiero`
-5. **Análisis específicos** según necesidad
+2. **Crear/obtener gastos** → `POST /api/v2/firebase/users/{id}/gastos`
+3. **Análisis completo** → `GET /api/v2/firebase/users/{id}/asesor-financiero`
+4. **Análisis específicos** según necesidad
 
 ---
 

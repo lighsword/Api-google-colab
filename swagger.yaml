@@ -209,61 +209,6 @@ paths:
                 instrucciones: "Usar en headers: Authorization: Bearer <token> o X-API-Key: <token>"
                 user_id: "abc123xyz789"
 
-  /api/v2/auth/validate:
-    post:
-      tags:
-        - Autenticación
-      summary: Validar token
-      description: Verifica si un token JWT es válido
-      security: []
-      responses:
-        '200':
-          description: Resultado de validación
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  valid:
-                    type: boolean
-                  message:
-                    type: string
-              example:
-                valid: true
-                message: "Token válido"
-
-  /api/v2/health:
-    get:
-      tags:
-        - Utilidades
-      summary: Estado de la API
-      description: Verifica el estado de la API y sus servicios
-      security: []
-      responses:
-        '200':
-          description: Estado de la API
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  timestamp:
-                    type: string
-                  firebase:
-                    type: boolean
-                  modelos_disponibles:
-                    type: object
-              example:
-                status: "ok"
-                timestamp: "2024-12-15T10:30:00"
-                firebase: true
-                modelos_disponibles:
-                  arima: true
-                  prophet: true
-                  lstm: false
-
   /api/v2/predict-category:
     post:
       tags:

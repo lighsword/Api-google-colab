@@ -1905,39 +1905,6 @@ def get_token():
     except Exception as e:
         return jsonify({'error': f'Error generando token: {str(e)}'}), 500
 
-@app.route('/api/v2/auth/validate', methods=['POST'])
-def validate_token_endpoint():
-    """Valida si un token es aún válido"""
-    try:
-        token = None
-        
-        # Intentar obtener token de X-API-Key
-        token = request.headers.get('X-API-Key')
-        
-        # Si no está en X-API-Key, intentar desde Authorization
-        if not token:
-            auth_header = request.headers.get('Authorization', '')
-            if auth_header:
-                parts = auth_header.split()
-                if len(parts) == 2 and parts[0].lower() == 'bearer':
-                    token = parts[1]
-                elif len(parts) == 1:
-                    token = parts[0]
-        
-        if not token:
-            return jsonify({
-                'valid': False, 
-                'message': 'Token no proporcionado. Usa header "Authorization: Bearer <token>" o "X-API-Key: <token>"'
-            }), 400
-        
-        is_valid = bool(verify_token(token))
-        return jsonify({
-            'valid': is_valid,
-            'message': 'Token válido' if is_valid else 'Token inválido o expirado'
-        }), 200
-    except Exception as e:
-        return jsonify({'error': f'Error validando token: {str(e)}'}), 500
-
 # ============================================================
 # 📊 ENDPOINTS DE LA API
 # ============================================================
@@ -1972,23 +1939,6 @@ def index():
     """Redirigir a la documentación de Swagger"""
     from flask import redirect
     return redirect('/docs')
-
-@app.route('/api/v2/health', methods=['GET'])
-def health():
-    """Verificar estado de la API."""
-    return jsonify({
-        'status': 'ok',
-        'timestamp': datetime.now().isoformat(),
-        'firebase': FIREBASE_AVAILABLE,
-        'modelos_disponibles': {
-            'arima': ARIMA_AVAILABLE,
-            'prophet': PROPHET_AVAILABLE,
-            'lstm': LSTM_AVAILABLE
-        },
-        'swagger_ui': '/docs',
-        'swagger_yaml': '/api/v2/swagger.yaml'
-    }), 200
-
 
 # ============================================================
 # 🔥 ENDPOINTS DE FIREBASE - CONSUMIR DATOS DEL APP FLUTTER
@@ -2928,9 +2878,7 @@ if __name__ == '__main__':
     print("   • POST /api/v2/charts/export - Exportar gráficos (JSON/BASE64)")
     print("   • POST /api/v2/charts/complete - Todos los gráficos")
     print("\n🔧 UTILIDAD:")
-    print("   • GET  /api/v2/health - Estado de la API")
     print("   • POST /api/v2/auth/token - Generar token JWT")
-    print("   • POST /api/v2/auth/validate - Validar token")
     
     print("\n" + "="*80)
     print("🔐 INSTRUCCIONES DE USO CON POSTMAN")
