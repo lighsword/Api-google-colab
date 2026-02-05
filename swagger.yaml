@@ -1809,3 +1809,220 @@ paths:
       responses:
         '200':
           description: Información de debug
+
+  # ===== NUEVOS ENDPOINTS CON SOPORTE DE CATEGORÍA =====
+  
+  /api/v2/users/{usuario_id}/predict-category:
+    get:
+      tags:
+        - 📊 Predicción Personalizada
+      summary: Predicción de categoría (filtrada)
+      description: |
+        Predicción de gastos por categoría específica. Parámetro opcional para filtrar por categoría.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/predict-category?category=Comida`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **Parámetros:**
+        - `usuario_id` (path): ID del usuario
+        - `category` (query): Categoría específica a analizar (opcional)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID único del usuario
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "Comida"
+          description: "Categoría específica para filtrar (ej: Comida, Transporte, Entretenimiento)"
+      responses:
+        '200':
+          description: Predicción exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  usuario_id:
+                    type: string
+                  categoria:
+                    type: string
+                    example: "Comida"
+                  data:
+                    type: object
+                    description: "Datos de predicción por categoría"
+        '400':
+          description: Sin datos disponibles
+        '500':
+          description: Error en la predicción
+
+  /api/v2/users/{usuario_id}/predict-monthly:
+    get:
+      tags:
+        - 📊 Predicción Personalizada
+      summary: Predicción mensual (filtrada)
+      description: |
+        Predicción de gastos mensuales (30 días). Parámetro opcional para filtrar por categoría.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/predict-monthly?category=Comida`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID único del usuario
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "Comida"
+          description: "Categoría específica para filtrar"
+      responses:
+        '200':
+          description: Predicción mensual exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  usuario_id:
+                    type: string
+                  categoria:
+                    type: string
+                  data:
+                    type: object
+                    description: "Datos de predicción mensual"
+        '400':
+          description: Sin datos disponibles
+
+  /api/v2/users/{usuario_id}/detect-anomalies:
+    get:
+      tags:
+        - 📊 Predicción Personalizada
+      summary: Detección de anomalías (filtrada)
+      description: |
+        Detecta gastos anómalos o inusuales. Parámetro opcional para filtrar por categoría.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/detect-anomalies?category=Comida`
+        
+        **🔑 Requiere:** Token de autenticación
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID único del usuario
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "Comida"
+          description: "Categoría específica para filtrar"
+      responses:
+        '200':
+          description: Análisis de anomalías exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  usuario_id:
+                    type: string
+                  categoria:
+                    type: string
+                  data:
+                    type: object
+                    description: "Datos de anomalías detectadas"
+        '400':
+          description: Sin datos disponibles
+
+  /api/v2/users/{usuario_id}/analysis-complete:
+    get:
+      tags:
+        - 📊 Predicción Personalizada
+      summary: Análisis completo personalizado
+      description: |
+        Análisis completo que incluye: predicción por categoría, predicción mensual, 
+        detección de anomalías, comparación de modelos y análisis de estacionalidad.
+        Parámetro opcional para filtrar por categoría.
+        
+        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/analysis-complete?category=Comida`
+        
+        **🔑 Requiere:** Token de autenticación
+        
+        **Incluye:**
+        1. Predicción de gastos por categoría
+        2. Predicción mensual de gastos
+        3. Detección de anomalías
+        4. Comparación de modelos (ARIMA, Prophet, LSTM)
+        5. Análisis de estacionalidad
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID único del usuario
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "Comida"
+          description: "Categoría específica para filtrar análisis completo"
+      responses:
+        '200':
+          description: Análisis completo exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  usuario_id:
+                    type: string
+                  categoria:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      prediccion_categoria:
+                        type: object
+                      prediccion_mensual:
+                        type: object
+                      anomalias:
+                        type: object
+                      comparacion_modelos:
+                        type: object
+                      estacionalidad:
+                        type: object
+                      timestamp:
+                        type: string
+                    description: "Análisis completo con todas las predicciones"
+        '400':
+          description: Sin datos disponibles para la categoría especificada
+        '500':
+          description: Error en el análisis

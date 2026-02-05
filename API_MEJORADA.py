@@ -4419,39 +4419,99 @@ def _normalized_expenses_for_user(usuario_id):
     return expenses, None
 
 # ----- Predicción -----
-@app.route('/api/v2/firebase/users/<usuario_id>/predict-category', methods=['GET'])
+@app.route('/api/v2/users/<usuario_id>/predict-category', methods=['GET'])
 @token_required
 def predict_category_user(usuario_id):
+    """Predicción por categoría específica. Parámetro: ?category=nombre (opcional)"""
     try:
+        category = request.args.get('category', None)
         expenses, err = _normalized_expenses_for_user(usuario_id)
         if not expenses:
             return jsonify({'error': 'No hay gastos en Firebase', 'detalle': err}), 400
         df = prepare_dataframe(expenses)
-        return jsonify({'status': 'success', 'usuario_id': usuario_id, 'data': predict_by_category(df)}), 200
+        
+        if category:
+            # Filtrar gastos por categoría
+            df_filtered = df[df['category'].str.lower() == category.lower()]
+            if df_filtered.empty:
+                return jsonify({
+                    'status': 'success',
+                    'usuario_id': usuario_id,
+                    'categoria': category,
+                    'data': {'mensaje': f'Sin datos para categoría: {category}'}
+                }), 200
+            prediction = predict_by_category(df_filtered, days=30)
+        else:
+            prediction = predict_by_category(df, days=30)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'categoria': category or 'todas',
+            'data': prediction
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/v2/firebase/users/<usuario_id>/predict-monthly', methods=['GET'])
+@app.route('/api/v2/users/<usuario_id>/predict-monthly', methods=['GET'])
 @token_required
 def predict_monthly_user(usuario_id):
+    """Predicción mensual (30 días). Parámetro: ?category=nombre (opcional)"""
     try:
+        category = request.args.get('category', None)
         expenses, err = _normalized_expenses_for_user(usuario_id)
         if not expenses:
             return jsonify({'error': 'No hay gastos en Firebase', 'detalle': err}), 400
         df = prepare_dataframe(expenses)
-        return jsonify({'status': 'success', 'usuario_id': usuario_id, 'data': predict_monthly(df)}), 200
+        
+        if category:
+            df = df[df['category'].str.lower() == category.lower()]
+            if df.empty:
+                return jsonify({
+                    'status': 'success',
+                    'usuario_id': usuario_id,
+                    'categoria': category,
+                    'data': {'mensaje': f'Sin datos para categoría: {category}'}
+                }), 200
+        
+        prediction = predict_monthly(df, days=30)
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'categoria': category or 'todas',
+            'data': prediction
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/v2/firebase/users/<usuario_id>/detect-anomalies', methods=['GET'])
+@app.route('/api/v2/users/<usuario_id>/detect-anomalies', methods=['GET'])
 @token_required
 def detect_anomalies_user(usuario_id):
+    """Detección de anomalías. Parámetro: ?category=nombre (opcional)"""
     try:
+        category = request.args.get('category', None)
         expenses, err = _normalized_expenses_for_user(usuario_id)
         if not expenses:
             return jsonify({'error': 'No hay gastos en Firebase', 'detalle': err}), 400
         df = prepare_dataframe(expenses)
-        return jsonify({'status': 'success', 'usuario_id': usuario_id, 'data': detect_anomalies(df)}), 200
+        
+        if category:
+            df = df[df['category'].str.lower() == category.lower()]
+            if df.empty:
+                return jsonify({
+                    'status': 'success',
+                    'usuario_id': usuario_id,
+                    'categoria': category,
+                    'data': {'anomalias_detectadas': 0}
+                }), 200
+        
+        anomalies = detect_anomalies(df)
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'categoria': category or 'todas',
+            'data': anomalies
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -4479,14 +4539,27 @@ def seasonality_user(usuario_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/v2/firebase/users/<usuario_id>/analysis-complete', methods=['GET'])
+@app.route('/api/v2/users/<usuario_id>/analysis-complete', methods=['GET'])
 @token_required
 def analysis_complete_user(usuario_id):
+    """Análisis completo de predicción. Parámetro: ?category=nombre (opcional)"""
     try:
+        category = request.args.get('category', None)
         expenses, err = _normalized_expenses_for_user(usuario_id)
         if not expenses:
             return jsonify({'error': 'No hay gastos en Firebase', 'detalle': err}), 400
         df = prepare_dataframe(expenses)
+        
+        if category:
+            df = df[df['category'].str.lower() == category.lower()]
+            if df.empty:
+                return jsonify({
+                    'status': 'error',
+                    'usuario_id': usuario_id,
+                    'categoria': category,
+                    'error': f'Sin datos disponibles para la categoría: {category}'
+                }), 400
+        
         result = {
             'prediccion_categoria': predict_by_category(df),
             'prediccion_mensual': predict_monthly(df),
@@ -4495,7 +4568,12 @@ def analysis_complete_user(usuario_id):
             'estacionalidad': analyze_seasonality(df),
             'timestamp': datetime.now().isoformat()
         }
-        return jsonify({'status': 'success', 'usuario_id': usuario_id, 'data': result}), 200
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'categoria': category or 'todas',
+            'data': result
+        }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
