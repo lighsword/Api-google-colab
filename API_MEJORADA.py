@@ -5539,9 +5539,9 @@ def send_gasto_notification():
 
 @app.route('/api/notificaciones/alerta-presupuesto', methods=['POST'])
 @token_required
-def send_budget_alert():
+def send_budget_alert_notifications():
     """
-    Enviar alerta de presupuesto
+    Enviar alerta de presupuesto (usando controlador de notificaciones)
     
     Body:
     {
