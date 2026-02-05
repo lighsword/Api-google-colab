@@ -94,6 +94,156 @@ paths:
                   token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                   user_id: "abc123xyz789"
 
+  # ===== NOTIFICACIONES PUSH =====
+  /api/Firebase/sendnotificacion:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar notificación push (sin autenticación)
+      description: |
+        Envía una notificación push a un dispositivo específico usando Firebase Cloud Messaging.
+        
+        **Sin necesidad de autenticación JWT**, solo necesitas el token del dispositivo.
+        
+        **Uso típico:** Alertas del servidor, notificaciones del sistema
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - strToken
+                - strTitle
+                - strMessage
+              properties:
+                strToken:
+                  type: string
+                  example: "e7sJ2xK9nP3lQ5mR8vT2xZ1cA4dE6fG9hI0jK3lM5n"
+                  description: Token FCM del dispositivo
+                strTitle:
+                  type: string
+                  example: "Gasto Detectado"
+                  description: Título de la notificación (máx 100 caracteres)
+                strMessage:
+                  type: string
+                  example: "Detectamos un gasto de $100 en Comida"
+                  description: Cuerpo del mensaje (máx 240 caracteres)
+                mapData:
+                  type: object
+                  description: Datos adicionales personalizados (máx 4KB)
+                  example:
+                    categoria: "Comida"
+                    monto: "100"
+                    tipo_alerta: "gasto_detectado"
+                    id_transaccion: "txn_12345"
+      responses:
+        '200':
+          description: Notificación enviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  mensaje: "Notificación enviada exitosamente"
+                  message_id: "0:1675849384938204%3a1234567"
+                  timestamp: "2026-02-05T18:15:30.123456"
+        '400':
+          description: Faltan campos requeridos
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "error"
+                  mensaje: "Faltan campos requeridos: strToken, strTitle, strMessage"
+                  code: "MISSING_FIELDS"
+        '503':
+          description: Firebase no disponible
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "error"
+                  mensaje: "Firebase no disponible"
+                  code: "FIREBASE_NOT_AVAILABLE"
+
+  /api/v2/users/{usuario_id}/send-notification:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar notificación a todos los dispositivos del usuario
+      description: |
+        Envía una notificación push a TODOS los dispositivos registrados de un usuario.
+        
+        **Requiere autenticación JWT.**
+        
+        **Uso típico:** Alertas de meta alcanzada, recordatorios personalizados
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "user123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - titulo
+                - cuerpo
+              properties:
+                titulo:
+                  type: string
+                  example: "¡Meta Alcanzada!"
+                  description: Título de la notificación
+                cuerpo:
+                  type: string
+                  example: "Felicidades, ahorraste $1,000 en alimentación"
+                  description: Cuerpo del mensaje
+                datos_extra:
+                  type: object
+                  description: Datos adicionales opcionales
+                  example:
+                    tipo: "meta_alcanzada"
+                    meta_id: "meta_123"
+                    monto: "1000"
+      responses:
+        '200':
+          description: Notificación enviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  usuario_id: "user123"
+                  mensajes_enviados: 2
+                  mensaje: "Notificación enviada a 2 dispositivos"
+        '400':
+          description: |
+            - Faltan campos requeridos
+            - No hay dispositivos registrados
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "error"
+                  mensaje: "Faltan campos requeridos: titulo, cuerpo"
+        '401':
+          description: Token requerido o inválido
+        '503':
+          description: Firebase no disponible
+
   # ===== PREDICCIÓN PERSONALIZADA =====
   /api/v2/users/{usuario_id}/predict-category:
     get:

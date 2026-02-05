@@ -2181,6 +2181,180 @@ def get_token():
     except Exception as e:
         return jsonify({'error': f'Error generando token: {str(e)}'}), 500
 
+@app.route('/api/Firebase/sendnotificacion', methods=['POST'])
+def send_notification_firebase():
+    """
+    Envía una notificación push a un dispositivo específico usando Firebase Cloud Messaging.
+    
+    BODY (JSON):
+    {
+        "strToken": "token_del_dispositivo",
+        "strTitle": "Título de la notificación",
+        "strMessage": "Mensaje de la notificación",
+        "mapData": {
+            "propiedad1": "valor1",
+            "propiedad2": "valor2"
+        }
+    }
+    
+    EJEMPLO:
+    {
+        "strToken": "e7sJ2x...",
+        "strTitle": "Gasto Detectado",
+        "strMessage": "Detectamos un gasto de $100 en Comida",
+        "mapData": {
+            "categoria": "Comida",
+            "monto": "100",
+            "tipo_alerta": "gasto_detectado"
+        }
+    }
+    """
+    if not FIREBASE_AVAILABLE:
+        return jsonify({
+            'status': 'error',
+            'mensaje': 'Firebase no disponible',
+            'code': 'FIREBASE_NOT_AVAILABLE'
+        }), 503
+    
+    try:
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        str_token = data.get('strToken')
+        str_title = data.get('strTitle')
+        str_message = data.get('strMessage')
+        map_data = data.get('mapData', {})
+        
+        if not str_token or not str_title or not str_message:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Faltan campos requeridos: strToken, strTitle, strMessage',
+                'code': 'MISSING_FIELDS'
+            }), 400
+        
+        from firebase_admin import messaging
+        
+        # Construir notificación
+        notificacion = messaging.Notification(
+            title=str_title[:100],
+            body=str_message[:240]
+        )
+        
+        # Preparar datos adicionales
+        datos = map_data.copy()
+        datos['enviado_en'] = datetime.now().isoformat()
+        datos['tipo'] = 'notificacion_push'
+        
+        # Crear mensaje multiplatforma
+        mensaje = messaging.Message(
+            notification=notificacion,
+            data=datos,
+            token=str_token,
+            android=messaging.AndroidConfig(
+                priority='high',
+                notification=messaging.AndroidNotification(
+                    sound='default',
+                    color='#f45342',
+                ),
+            ),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(
+                        alert=messaging.ApsAlert(
+                            title=str_title,
+                            body=str_message
+                        ),
+                        sound='default',
+                        badge=1,
+                        mutable_content=True,
+                    ),
+                ),
+            ),
+            webpush=messaging.WebpushConfig(
+                notification=messaging.WebpushNotification(
+                    title=str_title,
+                    body=str_message,
+                    icon='https://www.example.com/icon.png'
+                ),
+            )
+        )
+        
+        # Enviar notificación
+        response = messaging.send(mensaje)
+        
+        return jsonify({
+            'status': 'success',
+            'mensaje': 'Notificación enviada exitosamente',
+            'message_id': response,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'mensaje': str(e),
+            'code': 'SEND_NOTIFICATION_ERROR'
+        }), 500
+
+@app.route('/api/v2/users/<usuario_id>/send-notification', methods=['POST'])
+@token_required
+def send_notification_to_user(usuario_id):
+    """
+    Envía una notificación push a todos los dispositivos registrados de un usuario.
+    Requiere autenticación.
+    
+    BODY (JSON):
+    {
+        "titulo": "Título",
+        "cuerpo": "Mensaje",
+        "datos_extra": {
+            "clave1": "valor1"
+        }
+    }
+    """
+    if not FIREBASE_AVAILABLE:
+        return jsonify({
+            'status': 'error',
+            'mensaje': 'Firebase no disponible'
+        }), 503
+    
+    try:
+        data = request.get_json()
+        titulo = data.get('titulo')
+        cuerpo = data.get('cuerpo')
+        datos_extra = data.get('datos_extra', {})
+        
+        if not titulo or not cuerpo:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Faltan campos requeridos: titulo, cuerpo'
+            }), 400
+        
+        resultado = send_push_notification(
+            usuario_id=usuario_id,
+            titulo=titulo,
+            cuerpo=cuerpo,
+            datos_extra=datos_extra
+        )
+        
+        if resultado.get('exito') is False:
+            return jsonify(resultado), 400
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'mensajes_enviados': resultado.get('exitosos', 0),
+            'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'mensaje': str(e)
+        }), 500
+
 # ============================================================
 # 📊 ENDPOINTS DE LA API
 # ============================================================
