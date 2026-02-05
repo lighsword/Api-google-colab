@@ -369,3 +369,839 @@ paths:
       responses:
         '200':
           description: Información de debug
+
+  # ===== ANÁLISIS PREDICTIVO (GENÉRICOS) =====
+  /api/v2/predict-category:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Predicción por categoría (genérica)
+      responses:
+        '200':
+          description: Predicción exitosa
+
+  /api/v2/predict-monthly:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Predicción mensual (genérica)
+      responses:
+        '200':
+          description: Predicción exitosa
+
+  /api/v2/detect-anomalies:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Detección de anomalías (genérica)
+      responses:
+        '200':
+          description: Análisis completado
+
+  /api/v2/compare-models:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Comparación de modelos (genérica)
+      responses:
+        '200':
+          description: Comparación completada
+
+  /api/v2/seasonality:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Análisis de estacionalidad (genérica)
+      responses:
+        '200':
+          description: Análisis completado
+
+  /api/v2/analysis-complete:
+    get:
+      tags:
+        - 📊 Predicción de Gastos
+      summary: Análisis completo (genérica)
+      responses:
+        '200':
+          description: Análisis completado
+
+  # ===== ANÁLISIS ESTADÍSTICO =====
+  /api/v2/stat/correlations:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Correlaciones entre categorías
+      responses:
+        '200':
+          description: Análisis de correlaciones
+
+  /api/v2/stat/temporal-comparison:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Comparación temporal
+      responses:
+        '200':
+          description: Comparación temporal
+
+  /api/v2/stat/clustering:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Clustering de gastos
+      responses:
+        '200':
+          description: Clustering completado
+
+  /api/v2/stat/trends:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Detección de tendencias
+      responses:
+        '200':
+          description: Tendencias detectadas
+
+  /api/v2/stat/outliers:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Detección de outliers
+      responses:
+        '200':
+          description: Outliers detectados
+
+  /api/v2/stat/complete:
+    get:
+      tags:
+        - 📈 Análisis Estadístico
+      summary: Análisis estadístico completo
+      responses:
+        '200':
+          description: Análisis completado
+
+  # ===== RECOMENDACIONES DE AHORRO =====
+  /api/v2/savings/goals:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Metas de ahorro
+      responses:
+        '200':
+          description: Metas obtenidas
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Crear meta de ahorro
+      responses:
+        '201':
+          description: Meta creada
+
+  /api/v2/savings/tips:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Tips personalizados
+      responses:
+        '200':
+          description: Tips generados
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Generar tips
+      responses:
+        '200':
+          description: Tips generados
+
+  /api/v2/savings/budget-alerts:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Alertas de presupuesto
+      responses:
+        '200':
+          description: Alertas obtenidas
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Crear alerta
+      responses:
+        '201':
+          description: Alerta creada
+
+  /api/v2/savings/health-score:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Puntuación financiera
+      responses:
+        '200':
+          description: Puntuación calculada
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Calcular puntuación
+      responses:
+        '200':
+          description: Puntuación calculada
+
+  /api/v2/savings/weekly-report:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Reporte semanal
+      responses:
+        '200':
+          description: Reporte generado
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Generar reporte
+      responses:
+        '200':
+          description: Reporte generado
+
+  /api/v2/savings/complete:
+    get:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Análisis completo de ahorro
+      responses:
+        '200':
+          description: Análisis completado
+    post:
+      tags:
+        - 💡 Recomendaciones de Ahorro
+      summary: Generar análisis completo
+      responses:
+        '200':
+          description: Análisis generado
+
+  # ===== GRÁFICOS Y VISUALIZACIÓN =====
+  /api/v2/charts/heatmap:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Calendario de calor
+      responses:
+        '200':
+          description: Heatmap generado
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Generar heatmap
+      responses:
+        '200':
+          description: Heatmap generado
+
+  /api/v2/charts/sankey:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Diagrama Sankey
+      responses:
+        '200':
+          description: Diagrama generado
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Generar Sankey
+      responses:
+        '200':
+          description: Diagrama generado
+
+  /api/v2/charts/dashboard:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Dashboard interactivo
+      responses:
+        '200':
+          description: Dashboard generado
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Generar dashboard
+      responses:
+        '200':
+          description: Dashboard generado
+
+  /api/v2/charts/comparison:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Comparación mensual
+      responses:
+        '200':
+          description: Comparación generada
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Generar comparación
+      responses:
+        '200':
+          description: Comparación generada
+
+  /api/v2/charts/export:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Exportar gráficos
+      responses:
+        '200':
+          description: Gráficos exportados
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Exportar gráficos
+      responses:
+        '200':
+          description: Gráficos exportados
+
+  /api/v2/charts/complete:
+    get:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Todos los gráficos
+      responses:
+        '200':
+          description: Gráficos generados
+    post:
+      tags:
+        - 📊 Gráficos y Visualización
+      summary: Generar todos los gráficos
+      responses:
+        '200':
+          description: Gráficos generados
+
+  # ===== FIREBASE INTEGRATION COMPLETA =====
+  /api/v2/firebase/usuarios:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener todos los usuarios
+      responses:
+        '200':
+          description: Usuarios obtenidos
+
+  /api/v2/firebase/usuarios/{usuario_id}:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener usuario específico
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usuario obtenido
+
+  /api/v2/firebase/users/{usuario_id}/gastos-procesados:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener gastos procesados
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gastos procesados
+
+  /api/v2/firebase/users/{usuario_id}/gastos-ids:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Obtener IDs de gastos
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: IDs obtenidos
+
+  # ===== ASESOR FINANCIERO IA =====
+  /api/v2/firebase/users/{usuario_id}/asesor-financiero:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Análisis completo con IA
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis generado
+
+  /api/v2/firebase/users/{usuario_id}/predicciones:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Predicciones para usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Predicciones generadas
+
+  /api/v2/firebase/users/{usuario_id}/analisis:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Análisis estadístico para usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis completado
+
+  /api/v2/firebase/users/{usuario_id}/recomendaciones:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Recomendaciones para usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recomendaciones generadas
+
+  /api/v2/firebase/users/{usuario_id}/graficos:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Gráficos para usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gráficos generados
+
+  /api/v2/firebase/users/{usuario_id}/score:
+    get:
+      tags:
+        - 🤖 Asesor Financiero IA
+      summary: Puntuación financiera del usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Puntuación calculada
+
+  # ===== NOTIFICACIONES =====
+  /api/v2/notifications/register-device:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Registrar dispositivo
+      responses:
+        '201':
+          description: Dispositivo registrado
+
+  /api/v2/notifications/unregister-device:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Desregistrar dispositivo
+      responses:
+        '200':
+          description: Dispositivo desregistrado
+
+  /api/v2/notifications/send:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar notificación
+      responses:
+        '200':
+          description: Notificación enviada
+
+  /api/v2/notifications/send-bulk:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar notificaciones masivas
+      responses:
+        '200':
+          description: Notificaciones enviadas
+
+  /api/v2/notifications/history/{usuario_id}:
+    get:
+      tags:
+        - 🔔 Notificaciones
+      summary: Historial de notificaciones
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Historial obtenido
+
+  /api/v2/notifications/send-alert/{usuario_id}:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar alerta a usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alerta enviada
+
+  /api/v2/notifications/send-tips/{usuario_id}:
+    post:
+      tags:
+        - 🔔 Notificaciones
+      summary: Enviar tips a usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tips enviados
+
+  # ===== FIREBASE USER-SPECIFIC ENDPOINTS =====
+  /api/v2/firebase/users/{usuario_id}/compare-models:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Comparación de modelos (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comparación completada
+
+  /api/v2/firebase/users/{usuario_id}/seasonality:
+    get:
+      tags:
+        - 🔥 Firebase Integration
+      summary: Análisis de estacionalidad (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis completado
+
+  # ===== FIREBASE STATS =====
+  /api/v2/firebase/users/{usuario_id}/stat/correlations:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Correlaciones (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Correlaciones calculadas
+
+  /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Comparación temporal (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comparación completada
+
+  /api/v2/firebase/users/{usuario_id}/stat/clustering:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Clustering (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clustering completado
+
+  /api/v2/firebase/users/{usuario_id}/stat/trends:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Tendencias (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tendencias calculadas
+
+  /api/v2/firebase/users/{usuario_id}/stat/outliers:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Outliers (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Outliers detectados
+
+  /api/v2/firebase/users/{usuario_id}/stat/complete:
+    get:
+      tags:
+        - 🔥 Firebase Stats
+      summary: Análisis estadístico completo (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis completado
+
+  # ===== FIREBASE SAVINGS =====
+  /api/v2/firebase/users/{usuario_id}/savings/goals:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Metas de ahorro (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Metas obtenidas
+
+  /api/v2/firebase/users/{usuario_id}/savings/tips:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Tips de ahorro (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tips generados
+
+  /api/v2/firebase/users/{usuario_id}/savings/budget-alerts:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Alertas de presupuesto (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Alertas generadas
+
+  /api/v2/firebase/users/{usuario_id}/savings/health-score:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Puntuación de salud financiera (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Puntuación calculada
+
+  /api/v2/firebase/users/{usuario_id}/savings/weekly-report:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Reporte semanal (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reporte generado
+
+  /api/v2/firebase/users/{usuario_id}/savings/complete:
+    get:
+      tags:
+        - 🔥 Firebase Savings
+      summary: Análisis completo de ahorro (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Análisis completado
+
+  # ===== FIREBASE CHARTS =====
+  /api/v2/firebase/users/{usuario_id}/charts/heatmap:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Heatmap de gastos (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Heatmap generado
+
+  /api/v2/firebase/users/{usuario_id}/charts/sankey:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Diagrama Sankey (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diagrama generado
+
+  /api/v2/firebase/users/{usuario_id}/charts/dashboard:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Dashboard interactivo (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dashboard generado
+
+  /api/v2/firebase/users/{usuario_id}/charts/comparison:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Comparación mensual (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comparación generada
+
+  /api/v2/firebase/users/{usuario_id}/charts/export:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Exportar gráficos (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gráficos exportados
+
+  /api/v2/firebase/users/{usuario_id}/charts/complete:
+    get:
+      tags:
+        - 🔥 Firebase Charts
+      summary: Todos los gráficos (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gráficos generados
