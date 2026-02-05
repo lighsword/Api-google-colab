@@ -111,6 +111,9 @@ paths:
           "categoria": "Comida"
         }
         ```
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -141,6 +144,8 @@ paths:
                     tendencia: "estable"
         '400':
           description: Sin datos en Firebase
+        '401':
+          description: Token requerido o inválido
         '500':
           description: Error en predicción
 
@@ -160,6 +165,9 @@ paths:
           "categoria": "Transporte"
         }
         ```
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -197,6 +205,8 @@ paths:
                         estimado: 337.50
         '400':
           description: Sin datos en Firebase
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/users/{usuario_id}/detect-anomalies:
     get:
@@ -214,6 +224,9 @@ paths:
           "categoria": "Entretenimiento"
         }
         ```
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -250,6 +263,8 @@ paths:
                     umbral_deteccion: 150.00
         '400':
           description: Sin datos en Firebase
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/users/{usuario_id}/analysis-complete:
     get:
@@ -267,6 +282,9 @@ paths:
           "categoria": "Compras"
         }
         ```
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -311,6 +329,8 @@ paths:
                     timestamp: "2026-02-05T15:30:45.123456"
         '400':
           description: Sin datos en Firebase
+        '401':
+          description: Token requerido o inválido
         '500':
           description: Error en el análisis
 
@@ -320,6 +340,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Obtener gastos del usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -334,6 +357,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Crear nuevo gasto
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -376,6 +402,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Predicción por categoría (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Predicción exitosa
@@ -385,6 +414,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Predicción mensual (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Predicción exitosa
@@ -394,6 +426,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Detección de anomalías (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis completado
@@ -403,6 +438,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Comparación de modelos (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Comparación completada
@@ -412,6 +450,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Análisis de estacionalidad (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis completado
@@ -421,6 +462,9 @@ paths:
       tags:
         - 📊 Predicción de Gastos
       summary: Análisis completo (genérica)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis completado
@@ -431,6 +475,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Correlaciones entre categorías
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis de correlaciones
@@ -440,6 +487,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Comparación temporal
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Comparación temporal
@@ -449,6 +499,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Clustering de gastos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Clustering completado
@@ -458,6 +511,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Detección de tendencias
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Tendencias detectadas
@@ -467,6 +523,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Detección de outliers
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Outliers detectados
@@ -476,6 +535,9 @@ paths:
       tags:
         - 📈 Análisis Estadístico
       summary: Análisis estadístico completo
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis completado
@@ -486,6 +548,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Metas de ahorro
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Metas obtenidas
@@ -493,6 +558,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Crear meta de ahorro
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '201':
           description: Meta creada
@@ -502,6 +570,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Tips personalizados
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Tips generados
@@ -509,6 +580,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Generar tips
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Tips generados
@@ -518,6 +592,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Alertas de presupuesto
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Alertas obtenidas
@@ -525,6 +602,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Crear alerta
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '201':
           description: Alerta creada
@@ -534,6 +614,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Puntuación financiera
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Puntuación calculada
@@ -541,6 +624,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Calcular puntuación
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Puntuación calculada
@@ -550,6 +636,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Reporte semanal
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Reporte generado
@@ -557,6 +646,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Generar reporte
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Reporte generado
@@ -566,6 +658,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Análisis completo de ahorro
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis completado
@@ -573,6 +668,9 @@ paths:
       tags:
         - 💡 Recomendaciones de Ahorro
       summary: Generar análisis completo
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Análisis generado
@@ -583,6 +681,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Calendario de calor
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Heatmap generado
@@ -590,6 +691,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Generar heatmap
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Heatmap generado
@@ -599,6 +703,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Diagrama Sankey
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Diagrama generado
@@ -606,6 +713,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Generar Sankey
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Diagrama generado
@@ -615,6 +725,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Dashboard interactivo
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Dashboard generado
@@ -622,6 +735,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Generar dashboard
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Dashboard generado
@@ -631,6 +747,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Comparación mensual
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Comparación generada
@@ -638,6 +757,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Generar comparación
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Comparación generada
@@ -647,6 +769,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Exportar gráficos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Gráficos exportados
@@ -654,6 +779,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Exportar gráficos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Gráficos exportados
@@ -663,6 +791,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Todos los gráficos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Gráficos generados
@@ -670,6 +801,9 @@ paths:
       tags:
         - 📊 Gráficos y Visualización
       summary: Generar todos los gráficos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Gráficos generados
@@ -680,6 +814,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Obtener todos los usuarios
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Usuarios obtenidos
@@ -689,6 +826,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Obtener usuario específico
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -704,6 +844,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Obtener gastos procesados
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -719,6 +862,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Obtener IDs de gastos
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -735,6 +881,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Análisis completo con IA
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -750,6 +899,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Predicciones para usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -765,6 +917,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Análisis estadístico para usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -780,6 +935,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Recomendaciones para usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -795,6 +953,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Gráficos para usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -810,6 +971,9 @@ paths:
       tags:
         - 🤖 Asesor Financiero IA
       summary: Puntuación financiera del usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -826,6 +990,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Registrar dispositivo
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '201':
           description: Dispositivo registrado
@@ -835,6 +1002,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Desregistrar dispositivo
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Dispositivo desregistrado
@@ -844,6 +1014,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Enviar notificación
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Notificación enviada
@@ -853,6 +1026,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Enviar notificaciones masivas
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       responses:
         '200':
           description: Notificaciones enviadas
@@ -862,6 +1038,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Historial de notificaciones
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -877,6 +1056,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Enviar alerta a usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -892,6 +1074,9 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Enviar tips a usuario
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -908,6 +1093,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Comparación de modelos (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -923,6 +1111,9 @@ paths:
       tags:
         - 🔥 Firebase Integration
       summary: Análisis de estacionalidad (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -939,6 +1130,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Correlaciones (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -954,6 +1148,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Comparación temporal (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -969,6 +1166,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Clustering (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -984,6 +1184,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Tendencias (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -999,6 +1202,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Outliers (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1014,6 +1220,9 @@ paths:
       tags:
         - 🔥 Firebase Stats
       summary: Análisis estadístico completo (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1030,6 +1239,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Metas de ahorro (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1045,6 +1257,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Tips de ahorro (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1060,6 +1275,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Alertas de presupuesto (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1075,6 +1293,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Puntuación de salud financiera (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1090,6 +1311,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Reporte semanal (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1105,6 +1329,9 @@ paths:
       tags:
         - 🔥 Firebase Savings
       summary: Análisis completo de ahorro (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1121,6 +1348,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Heatmap de gastos (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1136,6 +1366,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Diagrama Sankey (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1151,6 +1384,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Dashboard interactivo (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1166,6 +1402,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Comparación mensual (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1181,6 +1420,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Exportar gráficos (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
@@ -1196,6 +1438,9 @@ paths:
       tags:
         - 🔥 Firebase Charts
       summary: Todos los gráficos (usuario)
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
       parameters:
         - name: usuario_id
           in: path
