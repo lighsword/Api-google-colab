@@ -1174,48 +1174,192 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Registrar dispositivo
+      description: Registra un token de dispositivo para recibir notificaciones push
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_token
+              properties:
+                device_token:
+                  type: string
+                  example: "exjxrMLN4DM:APA91bFqx_zK8Vjl4..."
+                  description: Token FCM del dispositivo
+                dispositivo_info:
+                  type: object
+                  description: Información adicional del dispositivo (opcional)
+                  example:
+                    platform: "Android"
+                    app_version: "1.0.0"
       responses:
-        '201':
-          description: Dispositivo registrado
+        '200':
+          description: Dispositivo registrado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  mensaje: "Dispositivo registrado"
+                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+                  device_token: "exjxrMLN4DM:APA91bFqx..."
+        '400':
+          description: Error en validación
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/notifications/unregister-device:
     post:
       tags:
         - 🔔 Notificaciones
       summary: Desregistrar dispositivo
+      description: Elimina un token de dispositivo para dejar de recibir notificaciones
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - device_token
+              properties:
+                device_token:
+                  type: string
+                  example: "exjxrMLN4DM:APA91bFqx_zK8Vjl4..."
+                  description: Token FCM del dispositivo a desregistrar
       responses:
         '200':
-          description: Dispositivo desregistrado
+          description: Dispositivo desregistrado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  mensaje: "Dispositivo desregistrado"
+                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+        '400':
+          description: Error en validación
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/notifications/send:
     post:
       tags:
         - 🔔 Notificaciones
       summary: Enviar notificación
+      description: Envía una notificación push a un usuario específico
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - titulo
+                - cuerpo
+              properties:
+                usuario_id:
+                  type: string
+                  example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+                  description: ID del usuario (si no se proporciona usa el del JWT)
+                titulo:
+                  type: string
+                  example: "¡Gasto detectado!"
+                  description: Título de la notificación
+                cuerpo:
+                  type: string
+                  example: "Registramos un gasto de $50 en Comida"
+                  description: Cuerpo del mensaje
+                datos:
+                  type: object
+                  description: Datos adicionales (opcional)
+                  example:
+                    monto: 50
+                    categoria: "Comida"
+                device_token:
+                  type: string
+                  description: Token específico para enviar a un dispositivo (opcional)
       responses:
         '200':
-          description: Notificación enviada
+          description: Notificación enviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  mensaje: "Notificación enviada"
+        '400':
+          description: Error en validación
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/notifications/send-bulk:
     post:
       tags:
         - 🔔 Notificaciones
       summary: Enviar notificaciones masivas
+      description: Envía la misma notificación a múltiples usuarios
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - usuarios_ids
+                - titulo
+                - cuerpo
+              properties:
+                usuarios_ids:
+                  type: array
+                  items:
+                    type: string
+                  example: ["user1", "user2", "user3"]
+                  description: Lista de IDs de usuarios
+                titulo:
+                  type: string
+                  example: "Mantenimiento de API"
+                  description: Título de la notificación
+                cuerpo:
+                  type: string
+                  example: "El servidor estará en mantenimiento mañana"
+                  description: Cuerpo del mensaje
+                datos:
+                  type: object
+                  description: Datos adicionales (opcional)
       responses:
         '200':
-          description: Notificaciones enviadas
+          description: Notificaciones enviadas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  resultado:
+                    exitosos: 3
+                    fallidos: 0
+        '400':
+          description: Error en validación
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/notifications/history/{usuario_id}:
     get:
@@ -1240,6 +1384,7 @@ paths:
       tags:
         - 🔔 Notificaciones
       summary: Enviar alerta a usuario
+      description: Envía una alerta de presupuesto/gasto basada en el presupuesto mensual
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -1249,15 +1394,45 @@ paths:
           required: true
           schema:
             type: string
+          example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - presupuesto_mensual
+              properties:
+                presupuesto_mensual:
+                  type: number
+                  example: 1500.00
+                  description: Presupuesto mensual del usuario en USD
       responses:
         '200':
-          description: Alerta enviada
+          description: Alerta enviada exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  alerta:
+                    titulo: "⚠️ Presupuesto casi agotado"
+                    cuerpo: "Has utilizado el 87.5% de tu presupuesto mensual"
+                    tipo: "ADVERTENCIA"
+        '400':
+          description: Error en validación
+        '401':
+          description: Token requerido o inválido
 
   /api/v2/notifications/send-tips/{usuario_id}:
     post:
       tags:
         - 🔔 Notificaciones
       summary: Enviar tips a usuario
+      description: Envía recomendaciones personalizadas de ahorro como notificaciones
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -1267,9 +1442,38 @@ paths:
           required: true
           schema:
             type: string
+          example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoria:
+                  type: string
+                  example: "Comida"
+                  description: Categoría específica para el consejo (opcional)
+                tiempo_dias:
+                  type: integer
+                  example: 30
+                  description: Días a analizar (default 30)
       responses:
         '200':
-          description: Tips enviados
+          description: Tips enviados exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  mensaje: "Tips enviados"
+                  tips: ["Reduce gastos en Comida", "Compra en supermercados más económicos"]
+        '400':
+          description: Error - sin datos de gastos
+        '401':
+          description: Token requerido o inválido
 
   # ===== FIREBASE USER-SPECIFIC ENDPOINTS =====
   /api/v2/firebase/users/{usuario_id}/compare-models:
