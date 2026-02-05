@@ -2312,10 +2312,22 @@ def send_notification_me():
     {
         "titulo": "Título",
         "cuerpo": "Mensaje",
+        "descripcion": "Descripción detallada (opcional)",
+        "tipo_alerta": "gasto_anomalico|meta_alcanzada|presupuesto_excedido|consejo|etc",
         "datos_extra": {
             "clave1": "valor1"
         }
     }
+    
+    TIPOS DE ALERTAS DISPONIBLES:
+    - gasto_anomalico: Gasto inusual detectado
+    - meta_alcanzada: Usuario alcanzó una meta
+    - presupuesto_excedido: Se excedió el presupuesto
+    - presupuesto_proximo: Presupuesto casi agotado
+    - consejo: Consejo de ahorro personalizado
+    - recordatorio: Recordatorio importante
+    - celebracion: Celebración de logro
+    - alerta_general: Alerta general del sistema
     
     EJEMPLO CORRECTO:
     POST /api/v2/me/send-notification
@@ -2325,7 +2337,14 @@ def send_notification_me():
     Body:
     {
       "titulo": "¡Meta Alcanzada!",
-      "cuerpo": "Felicidades, ahorraste $1,000"
+      "cuerpo": "Felicidades, ahorraste $1,000",
+      "descripcion": "Completaste tu meta de ahorro mensual en la categoría Alimentación",
+      "tipo_alerta": "meta_alcanzada",
+      "datos_extra": {
+        "meta_id": "meta_123",
+        "monto": 1000,
+        "categoria": "Alimentación"
+      }
     }
     """
     if not FIREBASE_AVAILABLE:
@@ -2347,6 +2366,8 @@ def send_notification_me():
         data = request.get_json() or {}
         titulo = data.get('titulo')
         cuerpo = data.get('cuerpo')
+        descripcion = data.get('descripcion', '')
+        tipo_alerta = data.get('tipo_alerta', 'alerta_general')
         datos_extra = data.get('datos_extra', {})
         
         if not titulo or not cuerpo:
@@ -2355,11 +2376,19 @@ def send_notification_me():
                 'mensaje': 'Faltan campos requeridos: titulo, cuerpo'
             }), 400
         
+        # Agregar tipo_alerta y descripción a datos_extra para que la app los reciba
+        datos_notificacion = {
+            'tipo_alerta': tipo_alerta,
+            'descripcion': descripcion
+        }
+        if datos_extra:
+            datos_notificacion.update(datos_extra)
+        
         resultado = send_push_notification(
             usuario_id=usuario_id,
             titulo=titulo,
             cuerpo=cuerpo,
-            datos_extra=datos_extra
+            datos_extra=datos_notificacion
         )
         
         # Si no hay dispositivos, devolver 200 con mensaje informativo
@@ -2369,7 +2398,8 @@ def send_notification_me():
                     'status': 'info',
                     'usuario_id': usuario_id,
                     'mensajes_enviados': 0,
-                    'mensaje': 'El usuario no tiene dispositivos registrados. Asegúrate de que la app está configurada para recibir notificaciones.'
+                    'mensaje': 'El usuario no tiene dispositivos registrados. Asegúrate de que la app está configurada para recibir notificaciones.',
+                    'tipo_alerta': tipo_alerta
                 }), 200
             else:
                 return jsonify(resultado), 400
@@ -2377,6 +2407,7 @@ def send_notification_me():
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
+            'tipo_alerta': tipo_alerta,
             'mensajes_enviados': resultado.get('exitosos', 0),
             'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos',
             'exitosos': resultado.get('exitosos', 0),
@@ -2391,88 +2422,7 @@ def send_notification_me():
             'mensaje': str(e)
         }), 500
 
-@app.route('/api/v2/users/<usuario_id>/send-notification', methods=['POST'])
-@token_required
-def send_notification_to_user(usuario_id):
-    """
-    [DEPRECATED] Usa /api/v2/me/send-notification en su lugar.
-    
-    Este endpoint todavía funciona pero necesita usuario_id en la URL.
-    Envía una notificación push a todos los dispositivos registrados de un usuario.
-    Requiere autenticación JWT.
-    
-    BODY (JSON):
-    {
-        "titulo": "Título",
-        "cuerpo": "Mensaje",
-        "datos_extra": {
-            "clave1": "valor1"
-        }
-    }
-    """
-    if not FIREBASE_AVAILABLE:
-        return jsonify({
-            'status': 'error',
-            'mensaje': 'Firebase no disponible'
-        }), 503
-    
-    try:
-        # Obtener el usuario_id del token JWT (del contexto de @token_required)
-        jwt_usuario_id = g.get('user_id')
-        
-        # Validar que el usuario solo pueda enviar notificaciones a sí mismo
-        if jwt_usuario_id and jwt_usuario_id != usuario_id:
-            return jsonify({
-                'status': 'error',
-                'mensaje': 'No tienes permiso para enviar notificaciones a este usuario'
-            }), 403
-        
-        data = request.get_json() or {}
-        titulo = data.get('titulo')
-        cuerpo = data.get('cuerpo')
-        datos_extra = data.get('datos_extra', {})
-        
-        if not titulo or not cuerpo:
-            return jsonify({
-                'status': 'error',
-                'mensaje': 'Faltan campos requeridos: titulo, cuerpo'
-            }), 400
-        
-        resultado = send_push_notification(
-            usuario_id=usuario_id,
-            titulo=titulo,
-            cuerpo=cuerpo,
-            datos_extra=datos_extra
-        )
-        
-        # Si no hay dispositivos, devolver 200 con mensaje informativo
-        if resultado.get('exito') is False:
-            if 'No hay dispositivos' in resultado.get('mensaje', ''):
-                return jsonify({
-                    'status': 'info',
-                    'usuario_id': usuario_id,
-                    'mensajes_enviados': 0,
-                    'mensaje': 'El usuario no tiene dispositivos registrados. Asegúrate de que la app está configurada para recibir notificaciones.'
-                }), 200
-            else:
-                return jsonify(resultado), 400
-        
-        return jsonify({
-            'status': 'success',
-            'usuario_id': usuario_id,
-            'mensajes_enviados': resultado.get('exitosos', 0),
-            'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos',
-            'exitosos': resultado.get('exitosos', 0),
-            'fallidos': resultado.get('fallidos', 0)
-        }), 200
-        
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            'status': 'error',
-            'mensaje': str(e)
-        }), 500
+
 
 # ============================================================
 # 📊 ENDPOINTS DE LA API
