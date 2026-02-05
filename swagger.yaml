@@ -1818,29 +1818,37 @@ paths:
         - 📊 Predicción Personalizada
       summary: Predicción de categoría (filtrada)
       description: |
-        Predicción de gastos por categoría específica. Parámetro opcional para filtrar por categoría.
+        Predicción de gastos por categoría específica. Lee datos directamente de Firebase.
         
-        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/predict-category?category=Comida`
+        **Ejemplo de datos en Firebase:**
+        ```json
+        {
+          "fecha": "2024-12-20",
+          "monto": 85.50,
+          "categoria": "Comida"
+        }
         
-        **🔑 Requiere:** Token de autenticación
-        
-        **Parámetros:**
-        - `usuario_id` (path): ID del usuario
-        - `category` (query): Categoría específica a analizar (opcional)
+        **Datos en Firebase:**
+        ```json
+        {
+          "fecha": "2024-12-20",
+          "monto": 85.50,
+          "categoria": "Comida"
+        }
+        ```
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          description: ID único del usuario
+          example: "user123"
         - name: category
           in: query
           required: false
           schema:
             type: string
-            example: "Comida"
-          description: "Categoría específica para filtrar (ej: Comida, Transporte, Entretenimiento)"
+          example: "Comida"
       responses:
         '200':
           description: Predicción exitosa
@@ -1848,22 +1856,18 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  usuario_id:
-                    type: string
-                  categoria:
-                    type: string
-                    example: "Comida"
+                example:
+                  status: "success"
+                  usuario_id: "user123"
+                  categoria: "Comida"
                   data:
-                    type: object
-                    description: "Datos de predicción por categoría"
+                    prediccion_proximos_30_dias: 2550.75
+                    gasto_promedio_diario: 85.03
+                    tendencia: "estable"
         '400':
-          description: Sin datos disponibles
+          description: Sin datos en Firebase
         '500':
-          description: Error en la predicción
+          description: Error en predicción
 
   /api/v2/users/{usuario_id}/predict-monthly:
     get:
@@ -1871,25 +1875,29 @@ paths:
         - 📊 Predicción Personalizada
       summary: Predicción mensual (filtrada)
       description: |
-        Predicción de gastos mensuales (30 días). Parámetro opcional para filtrar por categoría.
+        Predicción de gastos mensuales (30 días).
         
-        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/predict-monthly?category=Comida`
-        
-        **🔑 Requiere:** Token de autenticación
+        **Datos en Firebase:**
+        ```json
+        {
+          "fecha": "2024-12-18",
+          "monto": 45.00,
+          "categoria": "Transporte"
+        }
+        ```
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          description: ID único del usuario
+          example: "user456"
         - name: category
           in: query
           required: false
           schema:
             type: string
-            example: "Comida"
-          description: "Categoría específica para filtrar"
+          example: "Transporte"
       responses:
         '200':
           description: Predicción mensual exitosa
@@ -1897,19 +1905,23 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  usuario_id:
-                    type: string
-                  categoria:
-                    type: string
+                example:
+                  status: "success"
+                  usuario_id: "user456"
+                  categoria: "Transporte"
                   data:
-                    type: object
-                    description: "Datos de predicción mensual"
+                    prediccion_mes: 1350.00
+                    semanas:
+                      - semana: 1
+                        estimado: 337.50
+                      - semana: 2
+                        estimado: 337.50
+                      - semana: 3
+                        estimado: 337.50
+                      - semana: 4
+                        estimado: 337.50
         '400':
-          description: Sin datos disponibles
+          description: Sin datos en Firebase
 
   /api/v2/users/{usuario_id}/detect-anomalies:
     get:
@@ -1917,25 +1929,29 @@ paths:
         - 📊 Predicción Personalizada
       summary: Detección de anomalías (filtrada)
       description: |
-        Detecta gastos anómalos o inusuales. Parámetro opcional para filtrar por categoría.
+        Detecta gastos anómalos o inusuales.
         
-        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/detect-anomalies?category=Comida`
-        
-        **🔑 Requiere:** Token de autenticación
+        **Datos en Firebase:**
+        ```json
+        {
+          "fecha": "2024-12-25",
+          "monto": 250.00,
+          "categoria": "Entretenimiento"
+        }
+        ```
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          description: ID único del usuario
+          example: "user789"
         - name: category
           in: query
           required: false
           schema:
             type: string
-            example: "Comida"
-          description: "Categoría específica para filtrar"
+          example: "Entretenimiento"
       responses:
         '200':
           description: Análisis de anomalías exitoso
@@ -1943,19 +1959,22 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  usuario_id:
-                    type: string
-                  categoria:
-                    type: string
+                example:
+                  status: "success"
+                  usuario_id: "user789"
+                  categoria: "Entretenimiento"
                   data:
-                    type: object
-                    description: "Datos de anomalías detectadas"
+                    anomalias_detectadas: 2
+                    gastos_atipicos:
+                      - fecha: "2024-12-25"
+                        monto: 500.00
+                        razon: "Valor muy alto (3x promedio)"
+                      - fecha: "2024-12-10"
+                        monto: 750.00
+                        razon: "Valor atípico detectado"
+                    umbral_deteccion: 150.00
         '400':
-          description: Sin datos disponibles
+          description: Sin datos en Firebase
 
   /api/v2/users/{usuario_id}/analysis-complete:
     get:
@@ -1963,34 +1982,29 @@ paths:
         - 📊 Predicción Personalizada
       summary: Análisis completo personalizado
       description: |
-        Análisis completo que incluye: predicción por categoría, predicción mensual, 
-        detección de anomalías, comparación de modelos y análisis de estacionalidad.
-        Parámetro opcional para filtrar por categoría.
+        Análisis completo: predicción, anomalías, comparación de modelos y estacionalidad.
         
-        **🔗 Endpoint:** `GET https://tu-api.com/api/v2/users/{usuario_id}/analysis-complete?category=Comida`
-        
-        **🔑 Requiere:** Token de autenticación
-        
-        **Incluye:**
-        1. Predicción de gastos por categoría
-        2. Predicción mensual de gastos
-        3. Detección de anomalías
-        4. Comparación de modelos (ARIMA, Prophet, LSTM)
-        5. Análisis de estacionalidad
+        **Datos en Firebase:**
+        ```json
+        {
+          "fecha": "2024-12-22",
+          "monto": 120.50,
+          "categoria": "Compras"
+        }
+        ```
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          description: ID único del usuario
+          example: "user999"
         - name: category
           in: query
           required: false
           schema:
             type: string
-            example: "Comida"
-          description: "Categoría específica para filtrar análisis completo"
+          example: "Compras"
       responses:
         '200':
           description: Análisis completo exitoso
@@ -1998,31 +2012,29 @@ paths:
             application/json:
               schema:
                 type: object
-                properties:
-                  status:
-                    type: string
-                    example: "success"
-                  usuario_id:
-                    type: string
-                  categoria:
-                    type: string
+                example:
+                  status: "success"
+                  usuario_id: "user999"
+                  categoria: "Compras"
                   data:
-                    type: object
-                    properties:
-                      prediccion_categoria:
-                        type: object
-                      prediccion_mensual:
-                        type: object
-                      anomalias:
-                        type: object
-                      comparacion_modelos:
-                        type: object
-                      estacionalidad:
-                        type: object
-                      timestamp:
-                        type: string
-                    description: "Análisis completo con todas las predicciones"
+                    prediccion_categoria:
+                      prediccion_proximos_30_dias: 3600.00
+                    prediccion_mensual:
+                      estimado_mes: 3600.00
+                      por_semana: 900.00
+                    anomalias:
+                      detectadas: 1
+                      gastos_atipicos:
+                        - monto: 1500.00
+                          razon: "Compra grande detectada"
+                    comparacion_modelos:
+                      mejor_modelo: "Prophet"
+                      precision: 0.87
+                    estacionalidad:
+                      patron: "Semanal"
+                      picos_dias: ["viernes", "sábado"]
+                    timestamp: "2026-02-05T15:30:45.123456"
         '400':
-          description: Sin datos disponibles para la categoría especificada
+          description: Sin datos en Firebase
         '500':
           description: Error en el análisis
