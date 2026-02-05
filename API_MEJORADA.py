@@ -360,6 +360,24 @@ def _get_expenses_or_firebase(data):
     return None, 'No se proporcionaron expenses y no se pudo determinar el usuario'
 
 
+def _get_user_expenses_from_token():
+    """Obtiene los gastos del usuario desde Firebase usando el user_id del token.
+    Se usa en endpoints GET que no reciben datos en el body."""
+    try:
+        user_id = getattr(g, 'user_id', None)
+    except Exception:
+        user_id = None
+    
+    if not user_id:
+        return None, None, 'Usuario no identificado en el token'
+    
+    expenses, err = _expenses_from_firebase_for_user(user_id)
+    if not expenses:
+        return None, user_id, f'No hay gastos en Firebase: {err}'
+    
+    return expenses, user_id, None
+
+
 # ============================================================
 # 1️⃣ PREDICCIÓN POR CATEGORÍA
 # ============================================================
@@ -1858,7 +1876,262 @@ def export_graphics_as_image(df, output_format='json'):
 
 
 # ============================================================
-# 🚀 INICIALIZAR FLASK Y ENDPOINTS
+# � NOTIFICACIONES PUSH - FIREBASE CLOUD MESSAGING
+# ============================================================
+
+def register_device_token(usuario_id, device_token, dispositivo_info=None):
+    """
+    Registra un token de dispositivo para un usuario.
+    
+    Args:
+        usuario_id: ID del usuario
+        device_token: Token FCM del dispositivo
+        dispositivo_info: Información adicional del dispositivo (opcional)
+    
+    Returns:
+        Booleano indicando éxito o error
+    """
+    if not FIREBASE_AVAILABLE or not db:
+        return False, 'Firebase no disponible'
+    
+    try:
+        # Crear o actualizar documento de tokens de dispositivo
+        tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+        tokens_ref.document(device_token).set({
+            'token': device_token,
+            'registrado_en': datetime.now().isoformat(),
+            'dispositivo_info': dispositivo_info or {},
+            'activo': True
+        }, merge=True)
+        return True, 'Token registrado exitosamente'
+    except Exception as e:
+        return False, f'Error registrando token: {str(e)}'
+
+
+def unregister_device_token(usuario_id, device_token):
+    """
+    Desregistra un token de dispositivo.
+    
+    Args:
+        usuario_id: ID del usuario
+        device_token: Token FCM del dispositivo
+    
+    Returns:
+        Booleano indicando éxito
+    """
+    if not FIREBASE_AVAILABLE or not db:
+        return False, 'Firebase no disponible'
+    
+    try:
+        tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+        tokens_ref.document(device_token).delete()
+        return True, 'Token desregistrado'
+    except Exception as e:
+        return False, f'Error: {str(e)}'
+
+
+def send_push_notification(usuario_id, titulo, cuerpo, datos_extra=None, device_token=None):
+    """
+    Envía una notificación push a un usuario o dispositivo específico.
+    
+    Args:
+        usuario_id: ID del usuario
+        titulo: Título de la notificación
+        cuerpo: Cuerpo del mensaje
+        datos_extra: Datos adicionales (dict)
+        device_token: Token específico del dispositivo (opcional)
+    
+    Returns:
+        Diccionario con resultado
+    """
+    if not FIREBASE_AVAILABLE or not db:
+        return {'exito': False, 'mensaje': 'Firebase no disponible'}
+    
+    try:
+        from firebase_admin import messaging
+        
+        # Si se proporciona token específico, usarlo
+        if device_token:
+            tokens = [device_token]
+        else:
+            # Obtener todos los tokens del usuario
+            tokens = []
+            try:
+                tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+                docs = tokens_ref.where('activo', '==', True).stream()
+                tokens = [doc.id for doc in docs]
+            except:
+                tokens = []
+        
+        if not tokens:
+            return {
+                'exito': False,
+                'mensaje': 'No hay dispositivos registrados para este usuario',
+                'tokens_enviados': 0
+            }
+        
+        # Construir mensaje de notificación
+        notificacion = messaging.Notification(
+            title=titulo[:100],  # Límite de 100 caracteres
+            body=cuerpo[:240]    # Límite de 240 caracteres
+        )
+        
+        # Datos adicionales (máximo 4KB)
+        mensaje_data = datos_extra or {}
+        mensaje_data['usuario_id'] = usuario_id
+        mensaje_data['enviado_en'] = datetime.now().isoformat()
+        
+        # Enviar a cada token
+        resultados = {
+            'exitosos': 0,
+            'fallidos': 0,
+            'detalles': []
+        }
+        
+        for token in tokens:
+            try:
+                # Crear mensaje multiplatforma
+                mensaje = messaging.Message(
+                    notification=notificacion,
+                    data=mensaje_data,
+                    token=token,
+                    android=messaging.AndroidConfig(
+                        priority='high',
+                        notification=messaging.AndroidNotification(
+                            sound='default',
+                            color='#f45342',
+                        ),
+                    ),
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                alert=messaging.ApsAlert(title=titulo, body=cuerpo),
+                                sound='default',
+                                badge=1,
+                                mutable_content=True,
+                            ),
+                        ),
+                    ),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(
+                            title=titulo,
+                            body=cuerpo,
+                            icon='https://www.example.com/icon.png'
+                        ),
+                    )
+                )
+                
+                # Enviar
+                response = messaging.send(mensaje)
+                resultados['exitosos'] += 1
+                resultados['detalles'].append({
+                    'token': token[:20] + '...',
+                    'estado': 'enviado',
+                    'message_id': response
+                })
+                
+                # Guardar notificación en historial
+                try:
+                    historial_ref = db.collection('usuarios').document(usuario_id).collection('notificaciones_historial')
+                    historial_ref.add({
+                        'titulo': titulo,
+                        'cuerpo': cuerpo,
+                        'datos': mensaje_data,
+                        'fecha_envio': datetime.now().isoformat(),
+                        'token': token,
+                        'exitoso': True
+                    })
+                except:
+                    pass
+                    
+            except Exception as e:
+                resultados['fallidos'] += 1
+                resultados['detalles'].append({
+                    'token': token[:20] + '...',
+                    'estado': 'error',
+                    'error': str(e)
+                })
+        
+        return {
+            'exito': resultados['exitosos'] > 0,
+            'mensaje': f'Notificación enviada a {resultados["exitosos"]} dispositivo(s)',
+            'resultados': resultados
+        }
+        
+    except Exception as e:
+        return {
+            'exito': False,
+            'mensaje': f'Error enviando notificación: {str(e)}'
+        }
+
+
+def send_bulk_notifications(usuarios_ids, titulo, cuerpo, datos_extra=None):
+    """
+    Envía notificaciones a múltiples usuarios.
+    
+    Args:
+        usuarios_ids: Lista de IDs de usuarios
+        titulo: Título de la notificación
+        cuerpo: Cuerpo del mensaje
+        datos_extra: Datos adicionales
+    
+    Returns:
+        Diccionario con resumen de resultados
+    """
+    resultados = {
+        'total_usuarios': len(usuarios_ids),
+        'exitosos': 0,
+        'fallidos': 0,
+        'detalles': []
+    }
+    
+    for usuario_id in usuarios_ids:
+        resultado = send_push_notification(usuario_id, titulo, cuerpo, datos_extra)
+        if resultado.get('exito'):
+            resultados['exitosos'] += 1
+        else:
+            resultados['fallidos'] += 1
+        
+        resultados['detalles'].append({
+            'usuario_id': usuario_id,
+            'exito': resultado.get('exito'),
+            'mensaje': resultado.get('mensaje')
+        })
+    
+    return resultados
+
+
+def get_notification_history(usuario_id, limite=50):
+    """
+    Obtiene el historial de notificaciones de un usuario.
+    
+    Args:
+        usuario_id: ID del usuario
+        limite: Cantidad máxima de registros
+    
+    Returns:
+        Lista de notificaciones
+    """
+    if not FIREBASE_AVAILABLE or not db:
+        return []
+    
+    try:
+        historial_ref = db.collection('usuarios').document(usuario_id).collection('notificaciones_historial')
+        docs = historial_ref.order_by('fecha_envio', direction='DESCENDING').limit(limite).stream()
+        
+        notificaciones = []
+        for doc in docs:
+            notificaciones.append({
+                'id': doc.id,
+                **doc.to_dict()
+            })
+        return notificaciones
+    except Exception as e:
+        return []
+
+
+# ============================================================
+# �🚀 INICIALIZAR FLASK Y ENDPOINTS
 # ============================================================
 
 # ============================================================
@@ -2268,120 +2541,119 @@ def crear_gasto_firebase(usuario_id):
         return jsonify({'error': f'Error creando gasto: {str(e)}'}), 500
 
 
-@app.route('/api/v2/predict-category', methods=['GET', 'POST'])
+@app.route('/api/v2/predict-category', methods=['GET'])
 @token_required
 def predict_category():
-    """Predicción separada por categoría (30 días). REQUIERE TOKEN."""
+    """Predicción separada por categoría (30 días). Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         predictions = predict_by_category(df, days=30)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': predictions
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/predict-monthly', methods=['GET', 'POST'])
+@app.route('/api/v2/predict-monthly', methods=['GET'])
 @token_required
 def predict_monthly_endpoint():
-    """Predicción mensual con 30 días."""
+    """Predicción mensual con 30 días. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         predictions = predict_monthly(df, days=30)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': predictions
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/detect-anomalies', methods=['GET', 'POST'])
+@app.route('/api/v2/detect-anomalies', methods=['GET'])
 @token_required
 def detect_anomalies_endpoint():
-    """Detección automática de anomalías."""
+    """Detección automática de anomalías. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         anomalies = detect_anomalies(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': anomalies
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/compare-models', methods=['GET', 'POST'])
+@app.route('/api/v2/compare-models', methods=['GET'])
 @token_required
 def compare_models_endpoint():
-    """Comparación de múltiples modelos ML."""
+    """Comparación de múltiples modelos ML. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         comparison = compare_models(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': comparison
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/seasonality', methods=['GET', 'POST'])
+@app.route('/api/v2/seasonality', methods=['GET'])
 @token_required
 def seasonality_endpoint():
-    """Análisis de estacionalidad."""
+    """Análisis de estacionalidad. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         seasonality = analyze_seasonality(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': seasonality
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/analysis-complete', methods=['GET', 'POST'])
+@app.route('/api/v2/analysis-complete', methods=['GET'])
 @token_required
 def analysis_complete():
-    """Análisis completo con las 5 mejoras."""
+    """Análisis completo con las 5 mejoras. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         
@@ -2396,129 +2668,129 @@ def analysis_complete():
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': result
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/correlations', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/correlations', methods=['GET'])
 @token_required
 def correlations_endpoint():
-    """Análisis de correlaciones entre categorías."""
+    """Análisis de correlaciones entre categorías. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         correlations = analyze_correlations(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': correlations
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/temporal-comparison', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/temporal-comparison', methods=['GET'])
 @token_required
 def temporal_comparison_endpoint():
-    """Comparación mes actual vs anterior."""
+    """Comparación mes actual vs anterior. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         comparison = analyze_temporal_comparison(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': comparison
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/clustering', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/clustering', methods=['GET'])
 @token_required
 def clustering_endpoint():
-    """Agrupamiento automático de gastos similares."""
+    """Agrupamiento automático de gastos similares. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
-        n_clusters = data.get('n_clusters', 3)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
+        n_clusters = request.args.get('n_clusters', 3, type=int)
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         clusters = perform_clustering(df, n_clusters=n_clusters)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': clusters
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/trends', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/trends', methods=['GET'])
 @token_required
 def trends_endpoint():
-    """Detección de tendencias en gastos."""
+    """Detección de tendencias en gastos. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         trends = detect_trends(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': trends
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/outliers', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/outliers', methods=['GET'])
 @token_required
 def outliers_endpoint():
-    """Detección de gastos atípicos con IQR y Z-Score."""
+    """Detección de gastos atípicos con IQR y Z-Score. Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         outliers = detect_outliers_iqr(df)
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': outliers
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v2/stat/complete', methods=['GET', 'POST'])
+@app.route('/api/v2/stat/complete', methods=['GET'])
 @token_required
 def statistical_analysis_complete():
-    """Análisis estadístico completo (todas las 5 mejoras)."""
+    """Análisis estadístico completo (todas las 5 mejoras). Carga automáticamente gastos del usuario. REQUIERE TOKEN."""
     try:
-        data = request.get_json()
-        expenses, err = _get_expenses_or_firebase(data)
+        expenses, usuario_id, err = _get_user_expenses_from_token()
         
         if not expenses:
-            return jsonify({'error': 'Datos inválidos o no hay gastos en Firebase', 'detalle': err}), 400
+            return jsonify({'error': 'No hay gastos disponibles', 'detalle': err}), 400
         
         df = prepare_dataframe(expenses)
         
@@ -2533,6 +2805,7 @@ def statistical_analysis_complete():
         
         return jsonify({
             'status': 'success',
+            'usuario_id': usuario_id,
             'data': result
         }), 200
     except Exception as e:
@@ -3846,7 +4119,296 @@ def obtener_score(usuario_id):
 
 
 # ============================================================
-# 📌 RUTAS ESPEJO IA BAJO /api/v2/firebase/users/{usuario_id}
+# � CONTROLADOR DE NOTIFICACIONES PUSH
+# ============================================================
+
+@app.route('/api/v2/notifications/register-device', methods=['POST'])
+@token_required
+def register_device():
+    """Registra un token de dispositivo para notificaciones push."""
+    try:
+        data = request.get_json()
+        if not data or 'device_token' not in data:
+            return jsonify({'error': 'device_token requerido'}), 400
+        
+        usuario_id = getattr(g, 'user_id', data.get('usuario_id'))
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+        
+        device_token = data.get('device_token')
+        dispositivo_info = data.get('dispositivo_info', {})
+        
+        exito, mensaje = register_device_token(usuario_id, device_token, dispositivo_info)
+        
+        if exito:
+            return jsonify({
+                'status': 'success',
+                'mensaje': mensaje,
+                'usuario_id': usuario_id,
+                'device_token': device_token[:20] + '...'
+            }), 200
+        else:
+            return jsonify({'error': mensaje}), 500
+            
+    except Exception as e:
+        return jsonify({'error': f'Error registrando dispositivo: {str(e)}'}), 500
+
+
+@app.route('/api/v2/notifications/unregister-device', methods=['POST'])
+@token_required
+def unregister_device():
+    """Desregistra un token de dispositivo."""
+    try:
+        data = request.get_json()
+        if not data or 'device_token' not in data:
+            return jsonify({'error': 'device_token requerido'}), 400
+        
+        usuario_id = getattr(g, 'user_id', data.get('usuario_id'))
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+        
+        device_token = data.get('device_token')
+        exito, mensaje = unregister_device_token(usuario_id, device_token)
+        
+        if exito:
+            return jsonify({
+                'status': 'success',
+                'mensaje': mensaje,
+                'usuario_id': usuario_id
+            }), 200
+        else:
+            return jsonify({'error': mensaje}), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/notifications/send', methods=['POST'])
+@token_required
+def send_notification():
+    """Envía una notificación push a un usuario."""
+    try:
+        data = request.get_json()
+        
+        # Validar campos requeridos
+        if not data or 'titulo' not in data or 'cuerpo' not in data:
+            return jsonify({'error': 'Se requieren: titulo, cuerpo'}), 400
+        
+        usuario_id = data.get('usuario_id', getattr(g, 'user_id', None))
+        if not usuario_id:
+            return jsonify({'error': 'usuario_id requerido'}), 400
+        
+        titulo = data.get('titulo')
+        cuerpo = data.get('cuerpo')
+        datos_extra = data.get('datos', {})
+        device_token = data.get('device_token')  # Opcional: si se quiere enviar a un dispositivo específico
+        
+        resultado = send_push_notification(
+            usuario_id, 
+            titulo, 
+            cuerpo, 
+            datos_extra,
+            device_token
+        )
+        
+        if resultado.get('exito'):
+            return jsonify(resultado), 200
+        else:
+            return jsonify(resultado), 400
+            
+    except Exception as e:
+        return jsonify({'error': f'Error enviando notificación: {str(e)}'}), 500
+
+
+@app.route('/api/v2/notifications/send-bulk', methods=['POST'])
+@token_required
+def send_bulk_notification():
+    """Envía notificaciones a múltiples usuarios."""
+    try:
+        data = request.get_json()
+        
+        # Validar campos
+        if not data or 'usuarios_ids' not in data or 'titulo' not in data or 'cuerpo' not in data:
+            return jsonify({'error': 'Se requieren: usuarios_ids (lista), titulo, cuerpo'}), 400
+        
+        usuarios_ids = data.get('usuarios_ids', [])
+        titulo = data.get('titulo')
+        cuerpo = data.get('cuerpo')
+        datos_extra = data.get('datos', {})
+        
+        if not isinstance(usuarios_ids, list) or len(usuarios_ids) == 0:
+            return jsonify({'error': 'usuarios_ids debe ser una lista no vacía'}), 400
+        
+        resultado = send_bulk_notifications(usuarios_ids, titulo, cuerpo, datos_extra)
+        
+        return jsonify({
+            'status': 'success',
+            'resultado': resultado
+        }), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/notifications/history/<usuario_id>', methods=['GET'])
+@token_required
+def get_notification_history_endpoint(usuario_id):
+    """Obtiene el historial de notificaciones de un usuario."""
+    try:
+        limite = request.args.get('limite', 50, type=int)
+        
+        if limite < 1 or limite > 500:
+            limite = 50
+        
+        historial = get_notification_history(usuario_id, limite)
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'cantidad': len(historial),
+            'notificaciones': historial
+        }), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/notifications/send-alert/<usuario_id>', methods=['POST'])
+@token_required
+def send_budget_alert(usuario_id):
+    """Envía una alerta de presupuesto a un usuario basada en sus gastos."""
+    try:
+        data = request.get_json() or {}
+        monthly_budget = data.get('presupuesto_mensual', 0)
+        
+        if monthly_budget <= 0:
+            return jsonify({'error': 'presupuesto_mensual debe ser > 0'}), 400
+        
+        # Obtener gastos del usuario
+        expenses, err = _expenses_from_firebase_for_user(usuario_id)
+        
+        if not expenses:
+            return jsonify({'error': f'No hay gastos: {err}'}), 400
+        
+        df = prepare_dataframe(expenses)
+        
+        # Calcular gasto del mes
+        current_date = df['fecha'].max()
+        current_month_start = pd.Timestamp(current_date.year, current_date.month, 1)
+        current_month_data = df[df['fecha'] >= current_month_start]
+        current_spend = current_month_data['monto'].sum()
+        
+        # Determinar alerta
+        budget_pct = (current_spend / monthly_budget * 100) if monthly_budget > 0 else 0
+        
+        if budget_pct >= 100:
+            titulo = '🚨 ¡Presupuesto excedido!'
+            cuerpo = f'Has gastado ${current_spend:.2f} de tu presupuesto de ${monthly_budget:.2f}'
+            tipo_alerta = 'CRÍTICO'
+        elif budget_pct >= 85:
+            titulo = '⚠️ Presupuesto casi agotado'
+            cuerpo = f'Has utilizado el {budget_pct:.1f}% de tu presupuesto mensual'
+            tipo_alerta = 'ADVERTENCIA'
+        elif budget_pct >= 70:
+            titulo = '📌 Presupuesto moderado'
+            cuerpo = f'Has gastado el {budget_pct:.1f}% de tu presupuesto'
+            tipo_alerta = 'ATENCIÓN'
+        else:
+            titulo = '✅ Dentro de presupuesto'
+            cuerpo = f'Solo has gastado el {budget_pct:.1f}% de tu presupuesto'
+            tipo_alerta = 'BUENO'
+        
+        # Enviar notificación
+        resultado = send_push_notification(
+            usuario_id,
+            titulo,
+            cuerpo,
+            {
+                'tipo_alerta': tipo_alerta,
+                'gasto_actual': current_spend,
+                'presupuesto': monthly_budget,
+                'porcentaje': budget_pct
+            }
+        )
+        
+        return jsonify({
+            'status': 'success',
+            'resultado': resultado,
+            'alerta': {
+                'titulo': titulo,
+                'cuerpo': cuerpo,
+                'tipo': tipo_alerta,
+                'gasto_actual': current_spend,
+                'presupuesto': monthly_budget,
+                'porcentaje_usado': budget_pct
+            }
+        }), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v2/notifications/send-tips/<usuario_id>', methods=['POST'])
+@token_required
+def send_personalized_tips(usuario_id):
+    """Envía recomendaciones personalizadas como notificaciones."""
+    try:
+        # Obtener gastos del usuario
+        expenses, err = _expenses_from_firebase_for_user(usuario_id)
+        
+        if not expenses:
+            return jsonify({'error': f'No hay gastos: {err}'}), 400
+        
+        df = prepare_dataframe(expenses)
+        
+        # Generar tips
+        tips = generate_personalized_tips(df)
+        
+        if not tips:
+            return jsonify({'error': 'No hay tips disponibles'}), 400
+        
+        # Enviar los tips principales como notificaciones
+        resultados = {
+            'total_tips': len(tips),
+            'enviados': 0,
+            'detalles': []
+        }
+        
+        for idx, tip in enumerate(tips[:3]):  # Enviar máximo los 3 primeros tips
+            titulo = f"💡 Tip {idx + 1}: {tip.get('titulo', 'Consejo financiero')}"
+            cuerpo = tip.get('descripcion', '')
+            
+            resultado = send_push_notification(
+                usuario_id,
+                titulo,
+                cuerpo,
+                {
+                    'tipo': 'tip',
+                    'prioridad': tip.get('prioridad'),
+                    'accion': tip.get('accion')
+                }
+            )
+            
+            if resultado.get('exito'):
+                resultados['enviados'] += 1
+            
+            resultados['detalles'].append({
+                'tip': tip,
+                'resultado': resultado
+            })
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'resultados': resultados
+        }), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================
+# �📌 RUTAS ESPEJO IA BAJO /api/v2/firebase/users/{usuario_id}
 # ============================================================
 
 def _normalized_expenses_for_user(usuario_id):

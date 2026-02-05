@@ -18,3 +18,4 @@ google-auth>=2.23.0
 seaborn>=0.13.2
 matplotlib>=3.8.2
 flask-swagger-ui>=4.11.1
+firebase-messaging==0.2.0
