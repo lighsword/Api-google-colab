@@ -2184,11 +2184,14 @@ def get_token():
 @app.route('/api/Firebase/sendnotificacion', methods=['POST'])
 def send_notification_firebase():
     """
-    Envía una notificación push a un dispositivo específico usando Firebase Cloud Messaging.
+    Envía una notificación push a un usuario específico por su ID.
+    La API automáticamente obtiene todos los tokens registrados del usuario y envía a todos ellos.
+    
+    Sin necesidad de autenticación JWT, solo necesitas el usuario_id.
     
     BODY (JSON):
     {
-        "strToken": "token_del_dispositivo",
+        "usuario_id": "ID_del_usuario",
         "strTitle": "Título de la notificación",
         "strMessage": "Mensaje de la notificación",
         "mapData": {
@@ -2199,14 +2202,23 @@ def send_notification_firebase():
     
     EJEMPLO:
     {
-        "strToken": "e7sJ2x...",
+        "usuario_id": "7niAh4AIH4dyNDiXnAb86jiZVEj2",
         "strTitle": "Gasto Detectado",
         "strMessage": "Detectamos un gasto de $100 en Comida",
         "mapData": {
             "categoria": "Comida",
             "monto": "100",
-            "tipo_alerta": "gasto_detectado"
+            "tipo_alerta": "gasto_detectado",
+            "id_transaccion": "txn_12345"
         }
+    }
+    
+    ALTERNATIVA - Enviar a un token específico (para casos especiales):
+    {
+        "strToken": "token_fcm_valido",
+        "strTitle": "Título",
+        "strMessage": "Mensaje",
+        "mapData": {...}
     }
     """
     if not FIREBASE_AVAILABLE:
@@ -2219,17 +2231,58 @@ def send_notification_firebase():
     try:
         data = request.get_json()
         
-        # Validar campos requeridos
-        str_token = data.get('strToken')
         str_title = data.get('strTitle')
         str_message = data.get('strMessage')
         map_data = data.get('mapData', {})
+        usuario_id = data.get('usuario_id')
+        str_token = data.get('strToken')
         
-        if not str_token or not str_title or not str_message:
+        # Validar campos mínimos requeridos
+        if not str_title or not str_message:
             return jsonify({
                 'status': 'error',
-                'mensaje': 'Faltan campos requeridos: strToken, strTitle, strMessage',
+                'mensaje': 'Faltan campos requeridos: strTitle, strMessage',
                 'code': 'MISSING_FIELDS'
+            }), 400
+        
+        # Si se proporciona un token directo, usarlo
+        if str_token:
+            tokens = [str_token]
+            usuario_id = None
+        elif usuario_id:
+            # Obtener todos los tokens del usuario desde Firestore
+            if not db:
+                return jsonify({
+                    'status': 'error',
+                    'mensaje': 'Firebase Firestore no disponible',
+                    'code': 'FIREBASE_NOT_AVAILABLE'
+                }), 503
+            
+            try:
+                tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+                docs = tokens_ref.where('activo', '==', True).stream()
+                tokens = [doc.id for doc in docs]
+            except Exception as e:
+                # Si Firestore falla, intentar con todos los tokens sin filtro
+                try:
+                    tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+                    docs = tokens_ref.stream()
+                    tokens = [doc.id for doc in docs]
+                except:
+                    tokens = []
+            
+            if not tokens:
+                return jsonify({
+                    'status': 'error',
+                    'mensaje': f'No hay dispositivos registrados para el usuario {usuario_id}. Primero registra un dispositivo usando /api/v2/notifications/register-device',
+                    'code': 'NO_DEVICES_FOUND',
+                    'usuario_id': usuario_id
+                }), 404
+        else:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Debes proporcionar "usuario_id" o "strToken"',
+                'code': 'MISSING_PARAMS'
             }), 400
         
         from firebase_admin import messaging
@@ -2244,50 +2297,316 @@ def send_notification_firebase():
         datos = map_data.copy()
         datos['enviado_en'] = datetime.now().isoformat()
         datos['tipo'] = 'notificacion_push'
+        if usuario_id:
+            datos['usuario_id'] = usuario_id
         
-        # Crear mensaje multiplatforma
-        mensaje = messaging.Message(
-            notification=notificacion,
-            data=datos,
-            token=str_token,
-            android=messaging.AndroidConfig(
-                priority='high',
-                notification=messaging.AndroidNotification(
-                    sound='default',
-                    color='#f45342',
-                ),
-            ),
-            apns=messaging.APNSConfig(
-                payload=messaging.APNSPayload(
-                    aps=messaging.Aps(
-                        alert=messaging.ApsAlert(
-                            title=str_title,
-                            body=str_message
+        # Enviar a cada token
+        resultados = {
+            'exitosos': 0,
+            'fallidos': 0,
+            'detalles': []
+        }
+        
+        for token in tokens:
+            try:
+                # Crear mensaje multiplatforma
+                mensaje = messaging.Message(
+                    notification=notificacion,
+                    data=datos,
+                    token=token,
+                    android=messaging.AndroidConfig(
+                        priority='high',
+                        notification=messaging.AndroidNotification(
+                            sound='default',
+                            color='#f45342',
                         ),
-                        sound='default',
-                        badge=1,
-                        mutable_content=True,
                     ),
-                ),
-            ),
-            webpush=messaging.WebpushConfig(
-                notification=messaging.WebpushNotification(
-                    title=str_title,
-                    body=str_message,
-                    icon='https://www.example.com/icon.png'
-                ),
-            )
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                alert=messaging.ApsAlert(
+                                    title=str_title,
+                                    body=str_message
+                                ),
+                                sound='default',
+                                badge=1,
+                                mutable_content=True,
+                            ),
+                        ),
+                    ),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(
+                            title=str_title,
+                            body=str_message,
+                            icon='https://www.example.com/icon.png'
+                        ),
+                    )
+                )
+                
+                # Enviar notificación
+                response = messaging.send(mensaje)
+                resultados['exitosos'] += 1
+                resultados['detalles'].append({
+                    'token': token[:30] + '...' if len(token) > 30 else token,
+                    'estado': 'enviado',
+                    'message_id': response
+                })
+                
+                # Guardar en historial si tenemos usuario_id
+                if usuario_id:
+                    try:
+                        historial_ref = db.collection('usuarios').document(usuario_id).collection('notificaciones_historial')
+                        historial_ref.add({
+                            'titulo': str_title,
+                            'cuerpo': str_message,
+                            'datos': datos,
+                            'fecha_envio': datetime.now().isoformat(),
+                            'token': token,
+                            'exitoso': True
+                        })
+                    except:
+                        pass
+                
+            except Exception as e:
+                resultados['fallidos'] += 1
+                error_msg = str(e)
+                resultados['detalles'].append({
+                    'token': token[:30] + '...' if len(token) > 30 else token,
+                    'estado': 'error',
+                    'error': error_msg
+                })
+        
+        # Preparar respuesta
+        response_data = {
+            'status': 'success' if resultados['exitosos'] > 0 else 'error',
+            'mensaje': f'Notificación enviada a {resultados["exitosos"]} dispositivo(s)' if resultados['exitosos'] > 0 else 'No se pudo enviar la notificación',
+            'timestamp': datetime.now().isoformat(),
+            'tokens_enviados': resultados['exitosos'],
+            'tokens_fallidos': resultados['fallidos'],
+            'detalles': resultados['detalles']
+        }
+        
+        if usuario_id:
+            response_data['usuario_id'] = usuario_id
+        
+        http_code = 200 if resultados['exitosos'] > 0 else 500
+        return jsonify(response_data), http_code
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'mensaje': str(e),
+            'code': 'SEND_NOTIFICATION_ERROR'
+        }), 500
+
+@app.route('/api/Firebase/sendnotificacion-usuario', methods=['POST'])
+def send_notification_to_user():
+    """
+    ✅ ENDPOINT RECOMENDADO - Envía notificación a un usuario por su ID
+    
+    Automáticamente obtiene TODOS los tokens registrados del usuario y envía a todos ellos.
+    Esta es la forma correcta de enviar notificaciones a usuarios.
+    
+    Sin necesidad de autenticación JWT, solo necesitas el usuario_id.
+    
+    BODY (JSON):
+    {
+        "usuario_id": "ID_del_usuario_en_firebase",
+        "strTitle": "Título de la notificación",
+        "strMessage": "Mensaje de la notificación",
+        "mapData": {
+            "categoria": "Comida",
+            "monto": "100",
+            "tipo_alerta": "gasto_detectado",
+            "id_transaccion": "txn_12345"
+        }
+    }
+    
+    RESPUESTA EXITOSA (200):
+    {
+        "status": "success",
+        "mensaje": "Notificación enviada a 2 dispositivo(s)",
+        "timestamp": "2026-02-05T21:15:30.123456",
+        "tokens_enviados": 2,
+        "tokens_fallidos": 0,
+        "usuario_id": "7niAh4AIH4dyNDiXnAb86jiZVEj2",
+        "detalles": [
+            {
+                "token": "e7sJ2xK9nP3lQ5mR8vT2x...",
+                "estado": "enviado",
+                "message_id": "0:1675849384938204%3a1234567"
+            }
+        ]
+    }
+    
+    ERRORES COMUNES:
+    - 404: No hay dispositivos registrados → El usuario debe registrar primero un dispositivo
+    - 400: Faltan campos requeridos → Verifica que envíes usuario_id, strTitle, strMessage
+    """
+    if not FIREBASE_AVAILABLE:
+        return jsonify({
+            'status': 'error',
+            'mensaje': 'Firebase no disponible',
+            'code': 'FIREBASE_NOT_AVAILABLE'
+        }), 503
+    
+    try:
+        data = request.get_json()
+        
+        usuario_id = data.get('usuario_id')
+        str_title = data.get('strTitle')
+        str_message = data.get('strMessage')
+        map_data = data.get('mapData', {})
+        
+        # Validar campos requeridos
+        if not usuario_id:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Campo requerido: usuario_id',
+                'code': 'MISSING_USUARIO_ID'
+            }), 400
+        
+        if not str_title or not str_message:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Faltan campos requeridos: strTitle, strMessage',
+                'code': 'MISSING_FIELDS'
+            }), 400
+        
+        # Obtener todos los tokens del usuario desde Firestore
+        if not db:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Firebase Firestore no disponible',
+                'code': 'FIREBASE_NOT_AVAILABLE'
+            }), 503
+        
+        try:
+            tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+            docs = tokens_ref.where('activo', '==', True).stream()
+            tokens = [doc.id for doc in docs]
+        except Exception as e:
+            # Si Firestore falla, intentar con todos los tokens sin filtro
+            try:
+                tokens_ref = db.collection('usuarios').document(usuario_id).collection('device_tokens')
+                docs = tokens_ref.stream()
+                tokens = [doc.id for doc in docs]
+            except:
+                tokens = []
+        
+        if not tokens:
+            return jsonify({
+                'status': 'error',
+                'mensaje': f'No hay dispositivos registrados para el usuario "{usuario_id}". Registra un dispositivo primero.',
+                'code': 'NO_DEVICES_FOUND',
+                'instruccion': 'Usa POST /api/v2/notifications/register-device para registrar un dispositivo',
+                'usuario_id': usuario_id
+            }), 404
+        
+        from firebase_admin import messaging
+        
+        # Construir notificación
+        notificacion = messaging.Notification(
+            title=str_title[:100],
+            body=str_message[:240]
         )
         
-        # Enviar notificación
-        response = messaging.send(mensaje)
+        # Preparar datos adicionales
+        datos = map_data.copy()
+        datos['enviado_en'] = datetime.now().isoformat()
+        datos['tipo'] = 'notificacion_push'
+        datos['usuario_id'] = usuario_id
         
-        return jsonify({
-            'status': 'success',
-            'mensaje': 'Notificación enviada exitosamente',
-            'message_id': response,
-            'timestamp': datetime.now().isoformat()
-        }), 200
+        # Enviar a cada token
+        resultados = {
+            'exitosos': 0,
+            'fallidos': 0,
+            'detalles': []
+        }
+        
+        for token in tokens:
+            try:
+                # Crear mensaje multiplatforma
+                mensaje = messaging.Message(
+                    notification=notificacion,
+                    data=datos,
+                    token=token,
+                    android=messaging.AndroidConfig(
+                        priority='high',
+                        notification=messaging.AndroidNotification(
+                            sound='default',
+                            color='#f45342',
+                        ),
+                    ),
+                    apns=messaging.APNSConfig(
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                alert=messaging.ApsAlert(
+                                    title=str_title,
+                                    body=str_message
+                                ),
+                                sound='default',
+                                badge=1,
+                                mutable_content=True,
+                            ),
+                        ),
+                    ),
+                    webpush=messaging.WebpushConfig(
+                        notification=messaging.WebpushNotification(
+                            title=str_title,
+                            body=str_message,
+                            icon='https://www.example.com/icon.png'
+                        ),
+                    )
+                )
+                
+                # Enviar notificación
+                response = messaging.send(mensaje)
+                resultados['exitosos'] += 1
+                resultados['detalles'].append({
+                    'token': token[:30] + '...' if len(token) > 30 else token,
+                    'estado': 'enviado',
+                    'message_id': response
+                })
+                
+                # Guardar en historial
+                try:
+                    historial_ref = db.collection('usuarios').document(usuario_id).collection('notificaciones_historial')
+                    historial_ref.add({
+                        'titulo': str_title,
+                        'cuerpo': str_message,
+                        'datos': datos,
+                        'fecha_envio': datetime.now().isoformat(),
+                        'token': token,
+                        'exitoso': True
+                    })
+                except:
+                    pass
+                
+            except Exception as e:
+                resultados['fallidos'] += 1
+                error_msg = str(e)
+                resultados['detalles'].append({
+                    'token': token[:30] + '...' if len(token) > 30 else token,
+                    'estado': 'error',
+                    'error': error_msg
+                })
+        
+        # Preparar respuesta
+        response_data = {
+            'status': 'success' if resultados['exitosos'] > 0 else 'error',
+            'mensaje': f'Notificación enviada a {resultados["exitosos"]} dispositivo(s)' if resultados['exitosos'] > 0 else 'No se pudo enviar la notificación',
+            'timestamp': datetime.now().isoformat(),
+            'tokens_enviados': resultados['exitosos'],
+            'tokens_fallidos': resultados['fallidos'],
+            'usuario_id': usuario_id,
+            'detalles': resultados['detalles']
+        }
+        
+        http_code = 200 if resultados['exitosos'] > 0 else 500
+        return jsonify(response_data), http_code
         
     except Exception as e:
         import traceback
