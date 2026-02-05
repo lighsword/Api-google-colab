@@ -317,6 +317,9 @@ def prepare_dataframe(expenses):
     df = pd.DataFrame(expenses)
     df['fecha'] = pd.to_datetime(df['fecha'])
     df['monto'] = pd.to_numeric(df['monto'])
+    # Estandarizar nombre de columna para compatibilidad
+    if 'categoria' in df.columns:
+        df['category'] = df['categoria']
     return df.sort_values('fecha').reset_index(drop=True)
 
 
