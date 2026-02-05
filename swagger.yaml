@@ -180,7 +180,15 @@ paths:
         
         **Requiere autenticación JWT.**
         
-        **Uso típico:** Alertas de meta alcanzada, recordatorios personalizados
+        **⚠️ IMPORTANTE:**
+        - El `usuario_id` en la URL debe ser el ID real del usuario (ej: `BCc7NaZ4KQTqFY3dUxgStWH62dh2`)
+        - NO pasar el JWT completo como usuario_id
+        - El usuario solo puede enviar notificaciones a sí mismo
+        
+        **Uso típico:** 
+        - Alertas de meta alcanzada
+        - Recordatorios personalizados
+        - Celebraciones de logros
       security:
         - BearerAuth: []
         - ApiKeyAuth: []
@@ -190,7 +198,8 @@ paths:
           required: true
           schema:
             type: string
-          example: "user123"
+          description: ID real del usuario (NO el JWT)
+          example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
       requestBody:
         required: true
         content:
@@ -218,20 +227,20 @@ paths:
                     monto: "1000"
       responses:
         '200':
-          description: Notificación enviada exitosamente
+          description: Notificación enviada exitosamente (o sin dispositivos registrados)
           content:
             application/json:
               schema:
                 type: object
                 example:
                   status: "success"
-                  usuario_id: "user123"
+                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
                   mensajes_enviados: 2
                   mensaje: "Notificación enviada a 2 dispositivos"
         '400':
           description: |
-            - Faltan campos requeridos
-            - No hay dispositivos registrados
+            - Faltan campos requeridos (titulo, cuerpo)
+            - Usuario inválido
           content:
             application/json:
               schema:
@@ -241,6 +250,15 @@ paths:
                   mensaje: "Faltan campos requeridos: titulo, cuerpo"
         '401':
           description: Token requerido o inválido
+        '403':
+          description: No tienes permiso para enviar notificaciones a este usuario
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "error"
+                  mensaje: "No tienes permiso para enviar notificaciones a este usuario"
         '503':
           description: Firebase no disponible
 

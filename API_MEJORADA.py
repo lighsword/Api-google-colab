@@ -2321,6 +2321,16 @@ def send_notification_to_user(usuario_id):
         }), 503
     
     try:
+        # Obtener el usuario_id del token JWT (del contexto de @token_required)
+        jwt_usuario_id = g.get('user_id')
+        
+        # Validar que el usuario solo pueda enviar notificaciones a sí mismo
+        if jwt_usuario_id and jwt_usuario_id != usuario_id:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'No tienes permiso para enviar notificaciones a este usuario'
+            }), 403
+        
         data = request.get_json()
         titulo = data.get('titulo')
         cuerpo = data.get('cuerpo')
@@ -2339,17 +2349,30 @@ def send_notification_to_user(usuario_id):
             datos_extra=datos_extra
         )
         
+        # Si no hay dispositivos, devolver 200 con mensaje informativo
         if resultado.get('exito') is False:
-            return jsonify(resultado), 400
+            if 'No hay dispositivos' in resultado.get('mensaje', ''):
+                return jsonify({
+                    'status': 'info',
+                    'usuario_id': usuario_id,
+                    'mensajes_enviados': 0,
+                    'mensaje': 'El usuario no tiene dispositivos registrados. Asegúrate de que la app está configurada para recibir notificaciones.'
+                }), 200
+            else:
+                return jsonify(resultado), 400
         
         return jsonify({
             'status': 'success',
             'usuario_id': usuario_id,
             'mensajes_enviados': resultado.get('exitosos', 0),
-            'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos'
+            'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos',
+            'exitosos': resultado.get('exitosos', 0),
+            'fallidos': resultado.get('fallidos', 0)
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'status': 'error',
             'mensaje': str(e)
