@@ -170,25 +170,95 @@ paths:
                   mensaje: "Firebase no disponible"
                   code: "FIREBASE_NOT_AVAILABLE"
 
-  /api/v2/users/{usuario_id}/send-notification:
+  /api/v2/me/send-notification:
     post:
       tags:
         - 🔔 Notificaciones
-      summary: Enviar notificación a todos los dispositivos del usuario
+      summary: Enviar notificación a mis dispositivos (RECOMENDADO)
       description: |
-        Envía una notificación push a TODOS los dispositivos registrados de un usuario.
+        Envía una notificación push a TODOS los dispositivos registrados del usuario autenticado.
         
         **Requiere autenticación JWT.**
         
-        **⚠️ IMPORTANTE:**
-        - El `usuario_id` en la URL debe ser el ID real del usuario (ej: `BCc7NaZ4KQTqFY3dUxgStWH62dh2`)
-        - NO pasar el JWT completo como usuario_id
-        - El usuario solo puede enviar notificaciones a sí mismo
+        **⭐ ESTA ES LA FORMA CORRECTA DE USAR EN SWAGGER:**
         
-        **Uso típico:** 
-        - Alertas de meta alcanzada
-        - Recordatorios personalizados
-        - Celebraciones de logros
+        1. Click en "Authorize" (botón verde arriba)
+        2. Pega tu JWT en el campo "Authorization"
+        3. Este endpoint usa automáticamente tu user_id del JWT
+        4. No necesitas pasar usuario_id en la URL
+        
+        **Ventajas:**
+        - ✅ Usa automáticamente tu user_id del JWT
+        - ✅ No hay confusión con parámetros en la URL
+        - ✅ Más seguro
+        - ✅ Más simple de usar
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - titulo
+                - cuerpo
+              properties:
+                titulo:
+                  type: string
+                  example: "¡Meta Alcanzada!"
+                  description: Título de la notificación
+                cuerpo:
+                  type: string
+                  example: "Felicidades, ahorraste $1,000 en alimentación"
+                  description: Cuerpo del mensaje
+                datos_extra:
+                  type: object
+                  description: Datos adicionales opcionales
+                  example:
+                    tipo: "meta_alcanzada"
+                    meta_id: "meta_123"
+                    monto: "1000"
+      responses:
+        '200':
+          description: Notificación enviada exitosamente (o sin dispositivos registrados)
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "success"
+                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
+                  mensajes_enviados: 2
+                  mensaje: "Notificación enviada a 2 dispositivos"
+        '400':
+          description: |
+            - Faltan campos requeridos (titulo, cuerpo)
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  status: "error"
+                  mensaje: "Faltan campos requeridos: titulo, cuerpo"
+        '401':
+          description: Token requerido o inválido
+        '503':
+          description: Firebase no disponible
+
+  /api/v2/users/{usuario_id}/send-notification:
+    post:
+      deprecated: true
+      tags:
+        - 🔔 Notificaciones
+      summary: "[DEPRECATED] Enviar notificación a usuario específico"
+      description: |
+        ⚠️ **DEPRECATED** - Usa `/api/v2/me/send-notification` en su lugar.
+        
+        Este endpoint todavía funciona pero requiere usuario_id en la URL.
+        
+        Usa `/api/v2/me/send-notification` que es más simple y seguro.
       security:
         - BearerAuth: []
         - ApiKeyAuth: []

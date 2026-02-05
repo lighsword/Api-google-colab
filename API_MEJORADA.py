@@ -2298,12 +2298,108 @@ def send_notification_firebase():
             'code': 'SEND_NOTIFICATION_ERROR'
         }), 500
 
+@app.route('/api/v2/me/send-notification', methods=['POST'])
+@token_required
+def send_notification_me():
+    """
+    Envía una notificación push a TODOS los dispositivos registrados del usuario autenticado.
+    Requiere autenticación JWT.
+    
+    Usa automáticamente el user_id del token JWT.
+    No requiere usuario_id en la URL.
+    
+    BODY (JSON):
+    {
+        "titulo": "Título",
+        "cuerpo": "Mensaje",
+        "datos_extra": {
+            "clave1": "valor1"
+        }
+    }
+    
+    EJEMPLO CORRECTO:
+    POST /api/v2/me/send-notification
+    Headers:
+      Authorization: Bearer {jwt_token}
+      Content-Type: application/json
+    Body:
+    {
+      "titulo": "¡Meta Alcanzada!",
+      "cuerpo": "Felicidades, ahorraste $1,000"
+    }
+    """
+    if not FIREBASE_AVAILABLE:
+        return jsonify({
+            'status': 'error',
+            'mensaje': 'Firebase no disponible'
+        }), 503
+    
+    try:
+        # Obtener el usuario_id AUTOMÁTICAMENTE del token JWT
+        usuario_id = g.get('user_id')
+        
+        if not usuario_id:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'No se pudo identificar al usuario. Token inválido.'
+            }), 401
+        
+        data = request.get_json() or {}
+        titulo = data.get('titulo')
+        cuerpo = data.get('cuerpo')
+        datos_extra = data.get('datos_extra', {})
+        
+        if not titulo or not cuerpo:
+            return jsonify({
+                'status': 'error',
+                'mensaje': 'Faltan campos requeridos: titulo, cuerpo'
+            }), 400
+        
+        resultado = send_push_notification(
+            usuario_id=usuario_id,
+            titulo=titulo,
+            cuerpo=cuerpo,
+            datos_extra=datos_extra
+        )
+        
+        # Si no hay dispositivos, devolver 200 con mensaje informativo
+        if resultado.get('exito') is False:
+            if 'No hay dispositivos' in resultado.get('mensaje', ''):
+                return jsonify({
+                    'status': 'info',
+                    'usuario_id': usuario_id,
+                    'mensajes_enviados': 0,
+                    'mensaje': 'El usuario no tiene dispositivos registrados. Asegúrate de que la app está configurada para recibir notificaciones.'
+                }), 200
+            else:
+                return jsonify(resultado), 400
+        
+        return jsonify({
+            'status': 'success',
+            'usuario_id': usuario_id,
+            'mensajes_enviados': resultado.get('exitosos', 0),
+            'mensaje': f'Notificación enviada a {resultado.get("exitosos", 0)} dispositivos',
+            'exitosos': resultado.get('exitosos', 0),
+            'fallidos': resultado.get('fallidos', 0)
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'mensaje': str(e)
+        }), 500
+
 @app.route('/api/v2/users/<usuario_id>/send-notification', methods=['POST'])
 @token_required
 def send_notification_to_user(usuario_id):
     """
+    [DEPRECATED] Usa /api/v2/me/send-notification en su lugar.
+    
+    Este endpoint todavía funciona pero necesita usuario_id en la URL.
     Envía una notificación push a todos los dispositivos registrados de un usuario.
-    Requiere autenticación.
+    Requiere autenticación JWT.
     
     BODY (JSON):
     {
@@ -2331,7 +2427,7 @@ def send_notification_to_user(usuario_id):
                 'mensaje': 'No tienes permiso para enviar notificaciones a este usuario'
             }), 403
         
-        data = request.get_json()
+        data = request.get_json() or {}
         titulo = data.get('titulo')
         cuerpo = data.get('cuerpo')
         datos_extra = data.get('datos_extra', {})
