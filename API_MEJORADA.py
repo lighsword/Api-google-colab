@@ -1980,7 +1980,13 @@ def send_push_notification(usuario_id, titulo, cuerpo, datos_extra=None, device_
         )
         
         # Datos adicionales (máximo 4KB)
-        mensaje_data = datos_extra or {}
+        # ⚠️ IMPORTANTE: Firebase Cloud Messaging requiere que TODOS los valores sean strings
+        mensaje_data = {}
+        if datos_extra:
+            for clave, valor in datos_extra.items():
+                # Convertir todos los valores a strings
+                mensaje_data[str(clave)] = str(valor)
+        
         mensaje_data['usuario_id'] = usuario_id
         mensaje_data['enviado_en'] = datetime.now().isoformat()
         
@@ -2294,7 +2300,12 @@ def send_notification_firebase():
         )
         
         # Preparar datos adicionales
-        datos = map_data.copy()
+        # ⚠️ IMPORTANTE: Firebase Cloud Messaging requiere que TODOS los valores sean strings
+        datos = {}
+        if map_data:
+            for clave, valor in map_data.items():
+                datos[str(clave)] = str(valor)
+        
         datos['enviado_en'] = datetime.now().isoformat()
         datos['tipo'] = 'notificacion_push'
         if usuario_id:
@@ -2514,7 +2525,12 @@ def send_notification_to_user():
         )
         
         # Preparar datos adicionales
-        datos = map_data.copy()
+        # ⚠️ IMPORTANTE: Firebase Cloud Messaging requiere que TODOS los valores sean strings
+        datos = {}
+        if map_data:
+            for clave, valor in map_data.items():
+                datos[str(clave)] = str(valor)
+        
         datos['enviado_en'] = datetime.now().isoformat()
         datos['tipo'] = 'notificacion_push'
         datos['usuario_id'] = usuario_id
