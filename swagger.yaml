@@ -5,51 +5,48 @@ info:
   description: |
     API avanzada con 20 características de Inteligencia Artificial para gestión financiera personal.
     
+    **Endpoints totales: 65 endpoints disponibles**
+    
     ## 🚀 Características Principales
     
     ### 📊 PREDICCIÓN DE GASTOS (5 mejoras)
     1. Predicción por categoría
     2. Predicción mensual (30 días)
     3. Detección de anomalías
-    4. Múltiples modelos ML (ARIMA, Prophet, LSTM)
+    4. Múltiples modelos ML
     5. Análisis de estacionalidad
     
     ### 📈 ANÁLISIS ESTADÍSTICO (5 mejoras)
     6. Correlaciones entre categorías
     7. Análisis temporal (mes actual vs anterior)
-    8. Clustering automático de gastos
+    8. Clustering de gastos
     9. Detección de tendencias
-    10. Identificación de outliers (IQR + Z-Score)
+    10. Identificación de outliers
     
     ### 💡 RECOMENDACIONES DE AHORRO (5 mejoras)
-    11. Metas de ahorro (objetivos específicos)
-    12. Tips personalizados (basados en patrones)
-    13. Alertas de presupuesto (límites mensuales)
-    14. Gamificación (puntuación financiera)
-    15. Reportes automáticos (resumen semanal)
+    11. Metas de ahorro
+    12. Tips personalizados
+    13. Alertas de presupuesto
+    14. Puntuación financiera
+    15. Reportes automáticos
     
     ### 📊 GRÁFICOS Y VISUALIZACIÓN (5 mejoras)
-    16. Calendario de calor (Heatmap de gastos)
-    17. Gráfico Sankey (Flujo de dinero)
-    18. Dashboard interactivo (Panel con filtros)
-    19. Comparativas (Mes vs mes anterior)
-    20. Exportar como imagen (PNG/PDF)
+    16. Heatmap de gastos
+    17. Diagrama Sankey
+    18. Dashboard interactivo
+    19. Comparativa mensual
+    20. Exportar como imagen
     
     ## 🔐 Autenticación
-    
-    Todos los endpoints (excepto `/auth/token` y `/health`) requieren autenticación mediante JWT.
-    
-    **Paso 1:** Obtener token en `/api/v2/auth/token`
-    
-    **Paso 2:** Incluir token en headers:
+    Todos los endpoints requieren JWT token en headers:
     - `Authorization: Bearer {token}` o
     - `X-API-Key: {token}`
 
 servers:
   - url: https://api-google-colab.onrender.com
-    description: Servidor de producción (Render)
+    description: Servidor de producción
   - url: http://localhost:5000
-    description: Servidor de desarrollo local
+    description: Servidor de desarrollo
 
 components:
   securitySchemes:
@@ -63,487 +60,101 @@ components:
       name: X-API-Key
 
 paths:
-  # ===== AUTENTICACIÓN =====
   /api/v2/auth/token:
     post:
       tags:
         - Autenticación
       summary: Generar token JWT
-      description: |
-        Genera un token de autenticación JWT válido por 24 horas.
+      description: Genera un token válido por 24 horas
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
-              required:
-                - user_id
               properties:
                 user_id:
                   type: string
-                  example: "abc123xyz789"
       responses:
         '200':
-          description: Token generado exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  user_id: "abc123xyz789"
+          description: Token generado
 
-  # ===== NOTIFICACIONES PUSH =====
-  /api/Firebase/sendnotificacion:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Enviar notificación push (sin autenticación)
-      description: |
-        Envía una notificación push a un dispositivo específico usando Firebase Cloud Messaging.
-        
-        **Sin necesidad de autenticación JWT**, solo necesitas el token del dispositivo.
-        
-        **Uso típico:** Alertas del servidor, notificaciones del sistema
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - strToken
-                - strTitle
-                - strMessage
-              properties:
-                strToken:
-                  type: string
-                  example: "e7sJ2xK9nP3lQ5mR8vT2xZ1cA4dE6fG9hI0jK3lM5n"
-                  description: Token FCM del dispositivo
-                strTitle:
-                  type: string
-                  example: "Gasto Detectado"
-                  description: Título de la notificación (máx 100 caracteres)
-                strMessage:
-                  type: string
-                  example: "Detectamos un gasto de $100 en Comida"
-                  description: Cuerpo del mensaje (máx 240 caracteres)
-                mapData:
-                  type: object
-                  description: Datos adicionales personalizados (máx 4KB)
-                  example:
-                    categoria: "Comida"
-                    monto: "100"
-                    tipo_alerta: "gasto_detectado"
-                    id_transaccion: "txn_12345"
-      responses:
-        '200':
-          description: Notificación enviada exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  mensaje: "Notificación enviada exitosamente"
-                  message_id: "0:1675849384938204%3a1234567"
-                  timestamp: "2026-02-05T18:15:30.123456"
-        '400':
-          description: Faltan campos requeridos
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "error"
-                  mensaje: "Faltan campos requeridos: strToken, strTitle, strMessage"
-                  code: "MISSING_FIELDS"
-        '503':
-          description: Firebase no disponible
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "error"
-                  mensaje: "Firebase no disponible"
-                  code: "FIREBASE_NOT_AVAILABLE"
-
-  /api/v2/me/send-notification:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Enviar notificación personalizada a mis dispositivos
-      description: |
-        Envía una notificación push personalizada a TODOS los dispositivos registrados del usuario autenticado.
-        
-        **Requiere autenticación JWT.**
-        
-        **La app puede configurar:**
-        - Título y cuerpo del mensaje
-        - Descripción detallada
-        - Tipo de alerta (para manejar diferentes flujos en la app)
-        - Datos adicionales personalizados
-        
-        **Tipos de alertas disponibles:**
-        - `gasto_anomalico`: Gasto inusual detectado
-        - `meta_alcanzada`: Usuario alcanzó una meta
-        - `presupuesto_excedido`: Se excedió el presupuesto
-        - `presupuesto_proximo`: Presupuesto casi agotado
-        - `consejo`: Consejo de ahorro personalizado
-        - `recordatorio`: Recordatorio importante
-        - `celebracion`: Celebración de logro
-        - `alerta_general`: Alerta general del sistema
-        
-        **Cómo usar en Swagger:**
-        1. Click en "Authorize" (botón verde arriba)
-        2. Pega tu JWT en el campo
-        3. Este endpoint usa automáticamente tu user_id del JWT
-        4. Envía los datos del mensaje
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - titulo
-                - cuerpo
-              properties:
-                titulo:
-                  type: string
-                  example: "⚠️ Gasto Anómalo"
-                  description: Título de la notificación (máx 100 caracteres)
-                cuerpo:
-                  type: string
-                  example: "Detectamos un gasto de $500 en Transporte"
-                  description: Cuerpo del mensaje (máx 240 caracteres)
-                descripcion:
-                  type: string
-                  example: "Este gasto es 3x mayor que tu promedio. ¿Es correcto?"
-                  description: Descripción detallada (opcional)
-                tipo_alerta:
-                  type: string
-                  example: "gasto_anomalico"
-                  description: |
-                    Tipo de alerta (opcional, default: "alerta_general")
-                    
-                    Valores válidos:
-                    - gasto_anomalico
-                    - meta_alcanzada
-                    - presupuesto_excedido
-                    - presupuesto_proximo
-                    - consejo
-                    - recordatorio
-                    - celebracion
-                    - alerta_general
-                datos_extra:
-                  type: object
-                  description: Datos adicionales personalizados (se envían a la app)
-                  example:
-                    monto: 500
-                    categoria: "Transporte"
-                    promedio: 165
-      responses:
-        '200':
-          description: Notificación enviada exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-                  tipo_alerta: "gasto_anomalico"
-                  mensajes_enviados: 2
-                  mensaje: "Notificación enviada a 2 dispositivos"
-                  exitosos: 2
-                  fallidos: 0
-        '400':
-          description: |
-            - Faltan campos requeridos (titulo, cuerpo)
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "error"
-                  mensaje: "Faltan campos requeridos: titulo, cuerpo"
-        '401':
-          description: Token requerido o inválido
-        '503':
-          description: Firebase no disponible
-
-  # ===== PREDICCIÓN PERSONALIZADA =====
-  /api/v2/users/{usuario_id}/predict-category:
+  /:
     get:
       tags:
-        - 📊 Predicción Personalizada
-      summary: Predicción de categoría (filtrada)
-      description: |
-        Predicción de gastos por categoría específica.
-        
-        **Datos en Firebase:**
-        ```json
-        {
-          "fecha": "2024-12-20",
-          "monto": 85.50,
-          "categoria": "Comida"
-        }
-        ```
+        - Utilidades
+      summary: Información de la API
+      responses:
+        '200':
+          description: Info general
+
+  /api/v2/swagger.yaml:
+    get:
+      tags:
+        - Utilidades
+      summary: Especificación OpenAPI
+      responses:
+        '200':
+          description: Especificación YAML
+
+  /api/v2/firebase/debug:
+    get:
+      tags:
+        - Utilidades
+      summary: Estado de Firebase
+      responses:
+        '200':
+          description: Estado
+
+  /api/v2/firebase/usuarios:
+    get:
+      tags:
+        - Usuarios
+      summary: Listar usuarios
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de usuarios
+
+  /api/v2/firebase/usuarios/{usuario_id}:
+    get:
+      tags:
+        - Usuarios
+      summary: Obtener usuario
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          example: "user123"
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "Comida"
-      responses:
-        '200':
-          description: Predicción exitosa
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  usuario_id: "user123"
-                  categoria: "Comida"
-                  data:
-                    prediccion_proximos_30_dias: 2550.75
-                    gasto_promedio_diario: 85.03
-                    tendencia: "estable"
-        '400':
-          description: Sin datos en Firebase
-        '401':
-          description: Token requerido o inválido
-        '500':
-          description: Error en predicción
-
-  /api/v2/users/{usuario_id}/predict-monthly:
-    get:
-      tags:
-        - 📊 Predicción Personalizada
-      summary: Predicción mensual (filtrada)
-      description: |
-        Predicción de gastos mensuales (30 días).
-        
-        **Datos en Firebase:**
-        ```json
-        {
-          "fecha": "2024-12-18",
-          "monto": 45.00,
-          "categoria": "Transporte"
-        }
-        ```
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: "user456"
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "Transporte"
       responses:
         '200':
-          description: Predicción mensual exitosa
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  usuario_id: "user456"
-                  categoria: "Transporte"
-                  data:
-                    prediccion_mes: 1350.00
-                    semanas:
-                      - semana: 1
-                        estimado: 337.50
-                      - semana: 2
-                        estimado: 337.50
-                      - semana: 3
-                        estimado: 337.50
-                      - semana: 4
-                        estimado: 337.50
-        '400':
-          description: Sin datos en Firebase
-        '401':
-          description: Token requerido o inválido
+          description: Usuario encontrado
 
-  /api/v2/users/{usuario_id}/detect-anomalies:
-    get:
-      tags:
-        - 📊 Predicción Personalizada
-      summary: Detección de anomalías (filtrada)
-      description: |
-        Detecta gastos anómalos o inusuales.
-        
-        **Datos en Firebase:**
-        ```json
-        {
-          "fecha": "2024-12-25",
-          "monto": 250.00,
-          "categoria": "Entretenimiento"
-        }
-        ```
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: "user789"
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "Entretenimiento"
-      responses:
-        '200':
-          description: Análisis de anomalías exitoso
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  usuario_id: "user789"
-                  categoria: "Entretenimiento"
-                  data:
-                    anomalias_detectadas: 2
-                    gastos_atipicos:
-                      - fecha: "2024-12-25"
-                        monto: 500.00
-                        razon: "Valor muy alto (3x promedio)"
-                      - fecha: "2024-12-10"
-                        monto: 750.00
-                        razon: "Valor atípico detectado"
-                    umbral_deteccion: 150.00
-        '400':
-          description: Sin datos en Firebase
-        '401':
-          description: Token requerido o inválido
-
-  /api/v2/users/{usuario_id}/analysis-complete:
-    get:
-      tags:
-        - 📊 Predicción Personalizada
-      summary: Análisis completo personalizado
-      description: |
-        Análisis completo: predicción, anomalías, comparación de modelos y estacionalidad.
-        
-        **Datos en Firebase:**
-        ```json
-        {
-          "fecha": "2024-12-22",
-          "monto": 120.50,
-          "categoria": "Compras"
-        }
-        ```
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: "user999"
-        - name: category
-          in: query
-          required: false
-          schema:
-            type: string
-          example: "Compras"
-      responses:
-        '200':
-          description: Análisis completo exitoso
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  usuario_id: "user999"
-                  categoria: "Compras"
-                  data:
-                    prediccion_categoria:
-                      prediccion_proximos_30_dias: 3600.00
-                    prediccion_mensual:
-                      estimado_mes: 3600.00
-                      por_semana: 900.00
-                    anomalias:
-                      detectadas: 1
-                      gastos_atipicos:
-                        - monto: 1500.00
-                          razon: "Compra grande detectada"
-                    comparacion_modelos:
-                      mejor_modelo: "Prophet"
-                      precision: 0.87
-                    estacionalidad:
-                      patron: "Semanal"
-                      picos_dias: ["viernes", "sábado"]
-                    timestamp: "2026-02-05T15:30:45.123456"
-        '400':
-          description: Sin datos en Firebase
-        '401':
-          description: Token requerido o inválido
-        '500':
-          description: Error en el análisis
-
-  # ===== FIREBASE INTEGRATION =====
   /api/v2/firebase/users/{usuario_id}/gastos:
     get:
       tags:
-        - 🔥 Firebase Integration
-      summary: Obtener gastos del usuario
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Gastos
+      summary: Obtener gastos
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-      responses:
-        '200':
-          description: Gastos obtenidos exitosamente
-    
-    post:
-      tags:
-        - 🔥 Firebase Integration
-      summary: Crear nuevo gasto
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Gastos del usuario
+
+    post:
+      tags:
+        - Gastos
+      summary: Crear gasto
       parameters:
         - name: usuario_id
           in: path
@@ -551,6 +162,7 @@ paths:
           schema:
             type: string
       requestBody:
+        required: true
         content:
           application/json:
             schema:
@@ -560,483 +172,25 @@ paths:
                   type: number
                 categoria:
                   type: string
-                fecha:
-                  type: string
-              example:
-                fecha: "2024-12-20"
-                monto: 85.50
-                categoria: "Comida"
+      security:
+        - BearerAuth: []
       responses:
         '201':
-          description: Gasto creado exitosamente
-
-  /api/v2/firebase/debug:
-    get:
-      tags:
-        - 🔧 Debug & Utilidades
-      summary: Debug de Firebase
-      security: []
-      responses:
-        '200':
-          description: Información de debug
-
-  # ===== ANÁLISIS PREDICTIVO (GENÉRICOS) =====
-  /api/v2/predict-category:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Predicción por categoría (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Predicción exitosa
-
-  /api/v2/predict-monthly:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Predicción mensual (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Predicción exitosa
-
-  /api/v2/detect-anomalies:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Detección de anomalías (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis completado
-
-  /api/v2/compare-models:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Comparación de modelos (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Comparación completada
-
-  /api/v2/seasonality:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Análisis de estacionalidad (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis completado
-
-  /api/v2/analysis-complete:
-    get:
-      tags:
-        - 📊 Predicción de Gastos
-      summary: Análisis completo (genérica)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis completado
-
-  # ===== ANÁLISIS ESTADÍSTICO =====
-  /api/v2/stat/correlations:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Correlaciones entre categorías
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis de correlaciones
-
-  /api/v2/stat/temporal-comparison:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Comparación temporal
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Comparación temporal
-
-  /api/v2/stat/clustering:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Clustering de gastos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Clustering completado
-
-  /api/v2/stat/trends:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Detección de tendencias
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Tendencias detectadas
-
-  /api/v2/stat/outliers:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Detección de outliers
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Outliers detectados
-
-  /api/v2/stat/complete:
-    get:
-      tags:
-        - 📈 Análisis Estadístico
-      summary: Análisis estadístico completo
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis completado
-
-  # ===== RECOMENDACIONES DE AHORRO =====
-  /api/v2/savings/goals:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Metas de ahorro
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Metas obtenidas
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Crear meta de ahorro
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '201':
-          description: Meta creada
-
-  /api/v2/savings/tips:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Tips personalizados
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Tips generados
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Generar tips
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Tips generados
-
-  /api/v2/savings/budget-alerts:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Alertas de presupuesto
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Alertas obtenidas
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Crear alerta
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '201':
-          description: Alerta creada
-
-  /api/v2/savings/health-score:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Puntuación financiera
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Puntuación calculada
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Calcular puntuación
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Puntuación calculada
-
-  /api/v2/savings/weekly-report:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Reporte semanal
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Reporte generado
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Generar reporte
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Reporte generado
-
-  /api/v2/savings/complete:
-    get:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Análisis completo de ahorro
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis completado
-    post:
-      tags:
-        - 💡 Recomendaciones de Ahorro
-      summary: Generar análisis completo
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Análisis generado
-
-  # ===== GRÁFICOS Y VISUALIZACIÓN =====
-  /api/v2/charts/heatmap:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Calendario de calor
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Heatmap generado
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Generar heatmap
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Heatmap generado
-
-  /api/v2/charts/sankey:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Diagrama Sankey
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Diagrama generado
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Generar Sankey
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Diagrama generado
-
-  /api/v2/charts/dashboard:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Dashboard interactivo
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Dashboard generado
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Generar dashboard
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Dashboard generado
-
-  /api/v2/charts/comparison:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Comparación mensual
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Comparación generada
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Generar comparación
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Comparación generada
-
-  /api/v2/charts/export:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Exportar gráficos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Gráficos exportados
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Exportar gráficos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Gráficos exportados
-
-  /api/v2/charts/complete:
-    get:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Todos los gráficos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Gráficos generados
-    post:
-      tags:
-        - 📊 Gráficos y Visualización
-      summary: Generar todos los gráficos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Gráficos generados
-
-  # ===== FIREBASE INTEGRATION COMPLETA =====
-  /api/v2/firebase/usuarios:
-    get:
-      tags:
-        - 🔥 Firebase Integration
-      summary: Obtener todos los usuarios
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      responses:
-        '200':
-          description: Usuarios obtenidos
-
-  /api/v2/firebase/usuarios/{usuario_id}:
-    get:
-      tags:
-        - 🔥 Firebase Integration
-      summary: Obtener usuario específico
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Usuario obtenido
+          description: Gasto creado
 
   /api/v2/firebase/users/{usuario_id}/gastos-procesados:
     get:
       tags:
-        - 🔥 Firebase Integration
-      summary: Obtener gastos procesados
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Gastos
+      summary: Gastos procesados
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Gastos procesados
@@ -1044,779 +198,779 @@ paths:
   /api/v2/firebase/users/{usuario_id}/gastos-ids:
     get:
       tags:
-        - 🔥 Firebase Integration
-      summary: Obtener IDs de gastos
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Gastos
+      summary: IDs de gastos
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: IDs obtenidos
+          description: IDs de gastos
 
-  # ===== ASESOR FINANCIERO IA =====
-  /api/v2/firebase/users/{usuario_id}/asesor-financiero:
+  /api/v2/predict-category:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Análisis completo con IA
+        - Predicción
+      summary: Predicción por categoría
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Análisis generado
+          description: Predicción
 
-  /api/v2/firebase/users/{usuario_id}/predicciones:
+  /api/v2/predict-monthly:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Predicciones para usuario
+        - Predicción
+      summary: Predicción mensual
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Predicciones generadas
+          description: Predicción
 
-  /api/v2/firebase/users/{usuario_id}/analisis:
+  /api/v2/detect-anomalies:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Análisis estadístico para usuario
+        - Predicción
+      summary: Detección de anomalías
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Análisis completado
+          description: Anomalías encontradas
 
-  /api/v2/firebase/users/{usuario_id}/recomendaciones:
+  /api/v2/compare-models:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Recomendaciones para usuario
+        - Predicción
+      summary: Comparación de modelos
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Recomendaciones generadas
+          description: Comparación
 
-  /api/v2/firebase/users/{usuario_id}/graficos:
+  /api/v2/seasonality:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Gráficos para usuario
+        - Predicción
+      summary: Análisis de estacionalidad
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Gráficos generados
+          description: Análisis
 
-  /api/v2/firebase/users/{usuario_id}/score:
+  /api/v2/analysis-complete:
     get:
       tags:
-        - 🤖 Asesor Financiero IA
-      summary: Puntuación financiera del usuario
+        - Predicción
+      summary: Análisis completo de predicción
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Puntuación calculada
+          description: Análisis
 
-  # ===== NOTIFICACIONES =====
-  /api/v2/notifications/register-device:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Registrar dispositivo
-      description: Registra un token de dispositivo para recibir notificaciones push
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - device_token
-              properties:
-                device_token:
-                  type: string
-                  example: "exjxrMLN4DM:APA91bFqx_zK8Vjl4..."
-                  description: Token FCM del dispositivo
-                dispositivo_info:
-                  type: object
-                  description: Información adicional del dispositivo (opcional)
-                  example:
-                    platform: "Android"
-                    app_version: "1.0.0"
-      responses:
-        '200':
-          description: Dispositivo registrado exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  mensaje: "Dispositivo registrado"
-                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-                  device_token: "exjxrMLN4DM:APA91bFqx..."
-        '400':
-          description: Error en validación
-        '401':
-          description: Token requerido o inválido
-
-  /api/v2/notifications/unregister-device:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Desregistrar dispositivo
-      description: Elimina un token de dispositivo para dejar de recibir notificaciones
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - device_token
-              properties:
-                device_token:
-                  type: string
-                  example: "exjxrMLN4DM:APA91bFqx_zK8Vjl4..."
-                  description: Token FCM del dispositivo a desregistrar
-      responses:
-        '200':
-          description: Dispositivo desregistrado exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  mensaje: "Dispositivo desregistrado"
-                  usuario_id: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-        '400':
-          description: Error en validación
-        '401':
-          description: Token requerido o inválido
-
-  /api/v2/notifications/send:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Enviar notificación
-      description: Envía una notificación push a un usuario específico
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - titulo
-                - cuerpo
-              properties:
-                usuario_id:
-                  type: string
-                  example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-                  description: ID del usuario (si no se proporciona usa el del JWT)
-                titulo:
-                  type: string
-                  example: "¡Gasto detectado!"
-                  description: Título de la notificación
-                cuerpo:
-                  type: string
-                  example: "Registramos un gasto de $50 en Comida"
-                  description: Cuerpo del mensaje
-                datos:
-                  type: object
-                  description: Datos adicionales (opcional)
-                  example:
-                    monto: 50
-                    categoria: "Comida"
-                device_token:
-                  type: string
-                  description: Token específico para enviar a un dispositivo (opcional)
-      responses:
-        '200':
-          description: Notificación enviada exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  mensaje: "Notificación enviada"
-        '400':
-          description: Error en validación
-        '401':
-          description: Token requerido o inválido
-
-  /api/v2/notifications/send-bulk:
-    post:
-      tags:
-        - 🔔 Notificaciones
-      summary: Enviar notificaciones masivas
-      description: Envía la misma notificación a múltiples usuarios
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - usuarios_ids
-                - titulo
-                - cuerpo
-              properties:
-                usuarios_ids:
-                  type: array
-                  items:
-                    type: string
-                  example: ["user1", "user2", "user3"]
-                  description: Lista de IDs de usuarios
-                titulo:
-                  type: string
-                  example: "Mantenimiento de API"
-                  description: Título de la notificación
-                cuerpo:
-                  type: string
-                  example: "El servidor estará en mantenimiento mañana"
-                  description: Cuerpo del mensaje
-                datos:
-                  type: object
-                  description: Datos adicionales (opcional)
-      responses:
-        '200':
-          description: Notificaciones enviadas exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  resultado:
-                    exitosos: 3
-                    fallidos: 0
-        '400':
-          description: Error en validación
-        '401':
-          description: Token requerido o inválido
-
-  /api/v2/notifications/history/{usuario_id}:
+  /api/v2/users/{usuario_id}/predict-category:
     get:
       tags:
-        - 🔔 Notificaciones
-      summary: Historial de notificaciones
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Predicción Personalizada
+      summary: Predicción por categoría (usuario)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Historial obtenido
+          description: Predicción del usuario
 
-  /api/v2/notifications/send-alert/{usuario_id}:
-    post:
+  /api/v2/users/{usuario_id}/predict-monthly:
+    get:
       tags:
-        - 🔔 Notificaciones
-      summary: Enviar alerta a usuario
-      description: Envía una alerta de presupuesto/gasto basada en el presupuesto mensual
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Predicción Personalizada
+      summary: Predicción mensual (usuario)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-          description: ID del usuario
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - presupuesto_mensual
-              properties:
-                presupuesto_mensual:
-                  type: number
-                  example: 1500.00
-                  description: Presupuesto mensual del usuario en USD
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Alerta enviada exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  alerta:
-                    titulo: "⚠️ Presupuesto casi agotado"
-                    cuerpo: "Has utilizado el 87.5% de tu presupuesto mensual"
-                    tipo: "ADVERTENCIA"
-        '400':
-          description: Error en validación
-        '401':
-          description: Token requerido o inválido
+          description: Predicción del usuario
 
-  /api/v2/notifications/send-tips/{usuario_id}:
-    post:
+  /api/v2/users/{usuario_id}/detect-anomalies:
+    get:
       tags:
-        - 🔔 Notificaciones
-      summary: Enviar tips a usuario
-      description: Envía recomendaciones personalizadas de ahorro como notificaciones
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Predicción Personalizada
+      summary: Anomalías (usuario)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
-          example: "BCc7NaZ4KQTqFY3dUxgStWH62dh2"
-          description: ID del usuario
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                categoria:
-                  type: string
-                  example: "Comida"
-                  description: Categoría específica para el consejo (opcional)
-                tiempo_dias:
-                  type: integer
-                  example: 30
-                  description: Días a analizar (default 30)
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Tips enviados exitosamente
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  status: "success"
-                  mensaje: "Tips enviados"
-                  tips: ["Reduce gastos en Comida", "Compra en supermercados más económicos"]
-        '400':
-          description: Error - sin datos de gastos
-        '401':
-          description: Token requerido o inválido
+          description: Anomalías del usuario
 
-  # ===== FIREBASE USER-SPECIFIC ENDPOINTS =====
+  /api/v2/users/{usuario_id}/analysis-complete:
+    get:
+      tags:
+        - Predicción Personalizada
+      summary: Análisis completo (usuario)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis del usuario
+
   /api/v2/firebase/users/{usuario_id}/compare-models:
     get:
       tags:
-        - 🔥 Firebase Integration
-      summary: Comparación de modelos (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Predicción Firebase
+      summary: Comparación de modelos (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Comparación completada
+          description: Comparación
 
   /api/v2/firebase/users/{usuario_id}/seasonality:
     get:
       tags:
-        - 🔥 Firebase Integration
-      summary: Análisis de estacionalidad (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Predicción Firebase
+      summary: Estacionalidad (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Análisis completado
+          description: Análisis
 
-  # ===== FIREBASE STATS =====
+  /api/v2/stat/correlations:
+    get:
+      tags:
+        - Estadística
+      summary: Correlaciones
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Correlaciones
+
+  /api/v2/stat/temporal-comparison:
+    get:
+      tags:
+        - Estadística
+      summary: Comparación temporal
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Comparación
+
+  /api/v2/stat/clustering:
+    get:
+      tags:
+        - Estadística
+      summary: Clustering
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Clustering
+
+  /api/v2/stat/trends:
+    get:
+      tags:
+        - Estadística
+      summary: Tendencias
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tendencias
+
+  /api/v2/stat/outliers:
+    get:
+      tags:
+        - Estadística
+      summary: Outliers
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Outliers
+
+  /api/v2/stat/complete:
+    get:
+      tags:
+        - Estadística
+      summary: Análisis estadístico completo
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis completo
+
   /api/v2/firebase/users/{usuario_id}/stat/correlations:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Correlaciones (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Correlaciones (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Correlaciones calculadas
+          description: Correlaciones
 
   /api/v2/firebase/users/{usuario_id}/stat/temporal-comparison:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Comparación temporal (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Comparación temporal (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Comparación completada
+          description: Comparación
 
   /api/v2/firebase/users/{usuario_id}/stat/clustering:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Clustering (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Clustering (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Clustering completado
+          description: Clustering
 
   /api/v2/firebase/users/{usuario_id}/stat/trends:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Tendencias (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Tendencias (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Tendencias calculadas
+          description: Tendencias
 
   /api/v2/firebase/users/{usuario_id}/stat/outliers:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Outliers (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Outliers (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Outliers detectados
+          description: Outliers
 
   /api/v2/firebase/users/{usuario_id}/stat/complete:
     get:
       tags:
-        - 🔥 Firebase Stats
-      summary: Análisis estadístico completo (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Estadística Firebase
+      summary: Análisis completo (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Análisis completado
+          description: Análisis
 
-  # ===== FIREBASE SAVINGS =====
-  /api/v2/firebase/users/{usuario_id}/savings/goals:
+  /api/v2/savings/goals:
     get:
       tags:
-        - 🔥 Firebase Savings
-      summary: Metas de ahorro (usuario)
+        - Ahorros
+      summary: Metas de ahorro
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Metas obtenidas
-
-  /api/v2/firebase/users/{usuario_id}/savings/tips:
-    get:
+          description: Metas
+    post:
       tags:
-        - 🔥 Firebase Savings
-      summary: Tips de ahorro (usuario)
+        - Ahorros
+      summary: Crear meta
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '201':
+          description: Meta creada
+
+  /api/v2/savings/tips:
+    get:
+      tags:
+        - Ahorros
+      summary: Tips de ahorro
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tips
+    post:
+      tags:
+        - Ahorros
+      summary: Generar tips
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Tips generados
 
-  /api/v2/firebase/users/{usuario_id}/savings/budget-alerts:
+  /api/v2/savings/budget-alerts:
     get:
       tags:
-        - 🔥 Firebase Savings
-      summary: Alertas de presupuesto (usuario)
+        - Ahorros
+      summary: Alertas de presupuesto
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Alertas generadas
-
-  /api/v2/firebase/users/{usuario_id}/savings/health-score:
-    get:
+          description: Alertas
+    post:
       tags:
-        - 🔥 Firebase Savings
-      summary: Puntuación de salud financiera (usuario)
+        - Ahorros
+      summary: Crear alerta
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '201':
+          description: Alerta creada
+
+  /api/v2/savings/health-score:
+    get:
+      tags:
+        - Ahorros
+      summary: Puntuación financiera
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Puntuación
+    post:
+      tags:
+        - Ahorros
+      summary: Calcular puntuación
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Puntuación calculada
 
-  /api/v2/firebase/users/{usuario_id}/savings/weekly-report:
+  /api/v2/savings/weekly-report:
     get:
       tags:
-        - 🔥 Firebase Savings
-      summary: Reporte semanal (usuario)
+        - Ahorros
+      summary: Reporte semanal
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '200':
+          description: Reporte
+    post:
+      tags:
+        - Ahorros
+      summary: Generar reporte
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Reporte generado
 
+  /api/v2/savings/complete:
+    get:
+      tags:
+        - Ahorros
+      summary: Análisis completo de ahorros
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis
+    post:
+      tags:
+        - Ahorros
+      summary: Análisis completo
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis generado
+
+  /api/v2/firebase/users/{usuario_id}/savings/goals:
+    get:
+      tags:
+        - Ahorros Firebase
+      summary: Metas (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Metas
+
+  /api/v2/firebase/users/{usuario_id}/savings/tips:
+    get:
+      tags:
+        - Ahorros Firebase
+      summary: Tips (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tips
+
+  /api/v2/firebase/users/{usuario_id}/savings/budget-alerts:
+    get:
+      tags:
+        - Ahorros Firebase
+      summary: Alertas (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Alertas
+
+  /api/v2/firebase/users/{usuario_id}/savings/health-score:
+    get:
+      tags:
+        - Ahorros Firebase
+      summary: Puntuación (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Puntuación
+
+  /api/v2/firebase/users/{usuario_id}/savings/weekly-report:
+    get:
+      tags:
+        - Ahorros Firebase
+      summary: Reporte (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Reporte
+
   /api/v2/firebase/users/{usuario_id}/savings/complete:
     get:
       tags:
-        - 🔥 Firebase Savings
-      summary: Análisis completo de ahorro (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Ahorros Firebase
+      summary: Análisis completo (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Análisis completado
+          description: Análisis
 
-  # ===== FIREBASE CHARTS =====
-  /api/v2/firebase/users/{usuario_id}/charts/heatmap:
+  /api/v2/charts/heatmap:
     get:
       tags:
-        - 🔥 Firebase Charts
-      summary: Heatmap de gastos (usuario)
+        - Gráficos
+      summary: Heatmap de gastos
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '200':
+          description: Heatmap
+    post:
+      tags:
+        - Gráficos
+      summary: Generar heatmap
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Heatmap generado
 
-  /api/v2/firebase/users/{usuario_id}/charts/sankey:
+  /api/v2/charts/sankey:
     get:
       tags:
-        - 🔥 Firebase Charts
-      summary: Diagrama Sankey (usuario)
+        - Gráficos
+      summary: Diagrama Sankey
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Diagrama generado
-
-  /api/v2/firebase/users/{usuario_id}/charts/dashboard:
-    get:
+          description: Sankey
+    post:
       tags:
-        - 🔥 Firebase Charts
-      summary: Dashboard interactivo (usuario)
+        - Gráficos
+      summary: Generar Sankey
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '200':
+          description: Sankey generado
+
+  /api/v2/charts/dashboard:
+    get:
+      tags:
+        - Gráficos
+      summary: Dashboard interactivo
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard
+    post:
+      tags:
+        - Gráficos
+      summary: Generar dashboard
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Dashboard generado
 
-  /api/v2/firebase/users/{usuario_id}/charts/comparison:
+  /api/v2/charts/comparison:
     get:
       tags:
-        - 🔥 Firebase Charts
-      summary: Comparación mensual (usuario)
+        - Gráficos
+      summary: Comparación mensual
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
-      parameters:
-        - name: usuario_id
-          in: path
-          required: true
-          schema:
-            type: string
+      responses:
+        '200':
+          description: Comparación
+    post:
+      tags:
+        - Gráficos
+      summary: Generar comparación
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Comparación generada
 
-  /api/v2/firebase/users/{usuario_id}/charts/export:
+  /api/v2/charts/export:
     get:
       tags:
-        - 🔥 Firebase Charts
-      summary: Exportar gráficos (usuario)
+        - Gráficos
+      summary: Exportar gráficos
       security:
         - BearerAuth: []
-        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Gráficos exportados
+    post:
+      tags:
+        - Gráficos
+      summary: Exportar como imagen
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Imagen generada
+
+  /api/v2/charts/complete:
+    get:
+      tags:
+        - Gráficos
+      summary: Todos los gráficos
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Gráficos
+    post:
+      tags:
+        - Gráficos
+      summary: Generar todos los gráficos
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Gráficos generados
+
+  /api/v2/firebase/users/{usuario_id}/charts/heatmap:
+    get:
+      tags:
+        - Gráficos Firebase
+      summary: Heatmap (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Heatmap
+
+  /api/v2/firebase/users/{usuario_id}/charts/sankey:
+    get:
+      tags:
+        - Gráficos Firebase
+      summary: Sankey (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sankey
+
+  /api/v2/firebase/users/{usuario_id}/charts/dashboard:
+    get:
+      tags:
+        - Gráficos Firebase
+      summary: Dashboard (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dashboard
+
+  /api/v2/firebase/users/{usuario_id}/charts/comparison:
+    get:
+      tags:
+        - Gráficos Firebase
+      summary: Comparación (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Comparación
+
+  /api/v2/firebase/users/{usuario_id}/charts/export:
+    get:
+      tags:
+        - Gráficos Firebase
+      summary: Exportar (Firebase)
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: Gráficos exportados
@@ -1824,17 +978,141 @@ paths:
   /api/v2/firebase/users/{usuario_id}/charts/complete:
     get:
       tags:
-        - 🔥 Firebase Charts
-      summary: Todos los gráficos (usuario)
-      security:
-        - BearerAuth: []
-        - ApiKeyAuth: []
+        - Gráficos Firebase
+      summary: Todos los gráficos (Firebase)
       parameters:
         - name: usuario_id
           in: path
           required: true
           schema:
             type: string
+      security:
+        - BearerAuth: []
       responses:
         '200':
-          description: Gráficos generados
+          description: Gráficos
+
+  /api/v2/me/send-notification:
+    post:
+      tags:
+        - Notificaciones
+      summary: Enviar notificación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titulo:
+                  type: string
+                mensaje:
+                  type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Notificación enviada
+
+  /api/v2/firebase/users/{usuario_id}/asesor-financiero:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Asesor Financiero Completo
+      description: Análisis completo con todas las características de IA
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis completo del asesor
+
+  /api/v2/firebase/users/{usuario_id}/predicciones:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Predicciones del usuario
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Predicciones
+
+  /api/v2/firebase/users/{usuario_id}/analisis:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Análisis estadístico completo
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Análisis
+
+  /api/v2/firebase/users/{usuario_id}/recomendaciones:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Recomendaciones personalizadas
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Recomendaciones
+
+  /api/v2/firebase/users/{usuario_id}/graficos:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Datos para gráficos
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Datos de gráficos
+
+  /api/v2/firebase/users/{usuario_id}/score:
+    get:
+      tags:
+        - Asesor Financiero IA
+      summary: Puntuación financiera
+      parameters:
+        - name: usuario_id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Puntuación calculada
